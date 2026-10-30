@@ -1,0 +1,16 @@
+{
+  "name": "lg-chez-jennifer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Site vitrine + billetterie Loup Garou chez Jennifer (deux projets indépendants).",
+  "scripts": {
+    "dev": "concurrently -n back,front -c blue,magenta \"npm --prefix lg-chez-jennifer-backend run start:dev\" \"npm --prefix lg-chez-jennifer-frontend run dev\"",
+    "build": "npm --prefix lg-chez-jennifer-backend run build && npm --prefix lg-chez-jennifer-frontend run build",
+    "install:all": "npm --prefix lg-chez-jennifer-backend install && npm --prefix lg-chez-jennifer-frontend install",
+    "dev:back": "npm --prefix lg-chez-jennifer-backend run start:dev",
+    "dev:front": "npm --prefix lg-chez-jennifer-frontend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -1,0 +1,325 @@
+@import "tailwindcss";
+
+/* ========================================================================== */
+/*  Les Soirées chez Jeynnifer — design tokens                                */
+/*                                                                            */
+/*  Un socle commun "soirée cosy" : nuit chaude (brun-noir), crème, pêche,    */
+/*  lueurs ambrées de guirlandes. Chaque concept teinte ce socle avec son     */
+/*  propre monde : ambre (Game Night), sang (Loup-Garou), lune (Ciné Lune).   */
+/*  Aucun néon froid, aucun code boîte de nuit.                              */
+/* ========================================================================== */
+@theme {
+  /* nuit (fonds sombres) */
+  --color-night: #0d0907;
+  --color-night-2: #16100c;
+  --color-night-3: #201712;
+  --color-paper: #f5e9da; /* texte principal sur fond sombre */
+  --color-paper-muted: #c9b6a0;
+  --color-paper-dim: #9a8670;
+  --color-line: rgba(245, 225, 200, 0.12);
+  --color-line-strong: rgba(245, 225, 200, 0.22);
+
+  /* crème (sections claires) */
+  --color-cream: #f7ece0;
+  --color-cream-2: #efdfcc;
+  --color-cacao: #2b1a14; /* texte sur crème */
+  --color-cacao-muted: #6b5446;
+  --color-cacao-line: rgba(43, 26, 20, 0.14);
+
+  /* marque */
+  --color-peach: #f6c9a7;
+  --color-peach-deep: #eaae86;
+  --color-ember: #e8a25a;
+  --color-wine: #6e1f2a;
+
+  /* mondes des concepts */
+  --color-game: #f0a04b;
+  --color-game-deep: #8a4b17;
+  --color-wolf: #c8262f;
+  --color-wolf-bright: #ff4552;
+  --color-wolf-deep: #4a0b10;
+  --color-moon: #c8c0ff;
+  --color-moon-deep: #2a2452;
+  --color-screen: #e9e4ff;
+
+  --font-display: var(--font-cormorant), "Cormorant", Georgia, serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-script: var(--font-script-face), "Segoe Script", cursive;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* -------------------------------------------------------------------------- */
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-stopped {
+    overflow: clip;
+  }
+
+  body {
+    background-color: var(--color-night);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    /* clip et non hidden : ne casse pas position: sticky */
+    overflow-x: clip;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-peach);
+    color: var(--color-cacao);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-peach);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  section[id] {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Composants typographiques (sous les utilities → un text-* gagne toujours) */
+/* -------------------------------------------------------------------------- */
+@layer components {
+  .t-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .t-caps {
+    font-family: var(--font-display);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 0.95;
+  }
+  .t-label {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--color-paper-muted);
+  }
+  .t-script {
+    font-family: var(--font-script);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+}
+
+@layer utilities {
+  /* grain argentique, fixe et discret */
+  .u-grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* SplitText (mask: "lines") : on agrandit la boîte de clip pour ne pas
+     couper les accents (ê, É) ni les jambages des italiques */
+  .u-line-mask {
+    padding-block: 0.14em 0.1em;
+    margin-block: -0.14em -0.1em;
+  }
+
+  /* masque utilisé par les révélations de texte (lignes qui montent) */
+  .u-mask {
+    overflow: clip;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+
+  /* rideau d'entrée : n'existe que si les animations sont actives */
+  .js-curtain {
+    display: none;
+  }
+  .js-motion .js-curtain {
+    display: flex;
+  }
+
+  /* état initial des éléments animés au scroll — visibles sans JS / reduced-motion */
+  .js-motion [data-reveal] {
+    opacity: 0;
+  }
+}
+
+/* Loup-Garou : joueur barré (le trait se dessine) et rôle dévoilé en fin de partie */
+@keyframes strike {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.anim-strike path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: strike 0.55s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+}
+.anim-strike path + path {
+  animation-delay: 0.3s;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes revive-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 230, 170, 0.9);
+  }
+  60% {
+    box-shadow: 0 0 60px 12px rgba(255, 210, 120, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 210, 120, 0);
+  }
+}
+.anim-revive {
+  animation: revive-glow 2.4s ease-out 2;
+}
+@keyframes crown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-60%) rotate(-40deg) scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-18deg);
+  }
+}
+.anim-crown-in {
+  animation: crown-in 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.anim-card-in {
+  animation: card-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* yeux qui clignent dans l'ombre (introduction de la partie) */
+@keyframes blink {
+  0%,
+  90%,
+  100% {
+    scale: 1 1;
+  }
+  94% {
+    scale: 1 0.08;
+  }
+}
+.anim-blink {
+  animation: blink 4.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-motion [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Petites animations CSS (indépendantes du scroll)                          */
+/* -------------------------------------------------------------------------- */
+@keyframes bulb {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.82;
+    transform: scale(0.97);
+  }
+  60% {
+    opacity: 0.93;
+    transform: scale(1.02);
+  }
+}
+@keyframes drift {
+  from {
+    transform: translate3d(-4%, 0, 0);
+  }
+  to {
+    transform: translate3d(4%, 0, 0);
+  }
+}
+@keyframes marquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@keyframes beam {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.anim-bulb {
+  animation: bulb 3.4s ease-in-out infinite;
+}
+.anim-flicker {
+  animation: flicker 2.6s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
+.anim-drift {
+  animation: drift 24s ease-in-out infinite alternate;
+}
+.anim-marquee {
+  animation: marquee 38s linear infinite;
+}
+.anim-beam {
+  animation: beam 5s ease-in-out infinite;
+}
