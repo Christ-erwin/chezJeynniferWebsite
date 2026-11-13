@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { adminApi, METHOD_LABEL, ORDER_STATUS, type AdminOrder } from "@/lib/admin-api";
-import { Badge, Button, CheckIcon, dateTime, ErrorNote, fcfa, Overlay, XIcon } from "./ui";
+import type { EventPack, PackChoice } from "@/lib/catalog";
+import { Badge, Button, CheckIcon, dateTime, ErrorNote, fcfa, Overlay, Select, XIcon } from "./ui";
+import { useLoad } from "./useLoad";
 
 /** Détail d'une commande + actions (valider le paiement, annuler). */
 export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder; onClose: () => void; onChanged: (o: AdminOrder) => void }) {
@@ -10,6 +12,8 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
   const [error, setError] = useState<string | null>(null);
   const scanned = o.tickets.filter((t) => t.usedAt).length;
   const phone = o.buyer.phone.replace(/\D/g, "");
+  const event = useLoad(() => adminApi.event(o.eventId), o.eventId);
+  const pack = event.data?.pack;
 
   async function act(kind: "paid" | "cancel") {
     const msg =
@@ -67,6 +71,8 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
             </li>
           </ul>
         </Section>
+
+        {pack && o.status !== "cancelled" && <PacksEditor key={o.updatedAt} order={o} pack={pack} onChanged={onChanged} />}
 
         {o.tickets.length > 0 && (
           <Section title={`Billets · ${scanned}/${o.tickets.length} scanné${scanned > 1 ? "s" : ""}`}>
@@ -126,6 +132,55 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
         </div>
       </div>
     </Overlay>
+  );
+}
+
+/** Le pack de chaque place : modifiable (changement de taille, vente sur place…). */
+function PacksEditor({ order: o, pack, onChanged }: { order: AdminOrder; pack: EventPack; onChanged: (o: AdminOrder) => void }) {
+  const seats = o.items.reduce((n, i) => n + i.quantity * i.seats, 0);
+  const [draft, setDraft] = useState<PackChoice[]>(() => Array.from({ length: seats }, (_, i) => o.packs?.[i] ?? { style: "", size: "" }));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(Array.from({ length: seats }, (_, i) => o.packs?.[i] ?? { style: "", size: "" }));
+  const set = (i: number, patch: Partial<PackChoice>) => setDraft((d) => d.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      onChanged(await adminApi.setOrderPacks(o.id, draft));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section title={pack.label}>
+      <ul className="space-y-2">
+        {draft.map((p, i) => (
+          <li key={i} className="grid grid-cols-[auto_1fr_5.5rem] items-center gap-2">
+            <span className="w-14 text-xs text-paper-dim">Place {i + 1}</span>
+            <Select aria-label={`Modèle, place ${i + 1}`} value={p.style} onChange={(e) => set(i, { style: e.target.value })} className="py-2! text-sm!">
+              <option value="">Modèle…</option>
+              {pack.styles.map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+            <Select aria-label={`Taille, place ${i + 1}`} value={p.size} onChange={(e) => set(i, { size: e.target.value })} className="py-2! text-sm!">
+              <option value="">Taille</option>
+              {pack.sizes.map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+          </li>
+        ))}
+      </ul>
+      {!o.packs?.length && <p className="mt-2 text-xs text-amber-200">Pas encore renseigné pour cette commande.</p>}
+      {error && <div className="mt-2"><ErrorNote>{error}</ErrorNote></div>}
+      {dirty && (
+        <Button size="sm" variant="primary" className="mt-3" disabled={busy || draft.some((p) => !p.style || !p.size)} onClick={save}>
+          <CheckIcon /> Enregistrer
+        </Button>
+      )}
+    </Section>
   );
 }
 

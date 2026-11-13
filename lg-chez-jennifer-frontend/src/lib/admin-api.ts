@@ -1,7 +1,7 @@
 "use client";
 
 import { API_BASE_URL, ApiError } from "@/lib/api";
-import type { ConceptSlug, PassTier } from "@/lib/catalog";
+import type { ConceptSlug, EventPack, PackChoice, PassTier } from "@/lib/catalog";
 import type { Game, GameState, GameSummary, Player, WinnerId } from "@/lib/werewolf";
 
 /**
@@ -95,6 +95,10 @@ export type AdminEvent = {
   venue: { name: string; city: string; address?: string; revealedAfterBooking: boolean };
   cover: string;
   capacity: number;
+  /** ouverture de la billetterie en ligne (ISO), facultative */
+  salesOpenAt?: string;
+  /** pack offert : modèle et taille choisis à la réservation */
+  pack?: EventPack;
   status: EventStatus;
   note?: string;
   tiers: PassTier[];
@@ -109,7 +113,7 @@ export type EventInput = Omit<AdminEvent, "id" | "createdAt" | "updatedAt" | "se
 export type AdminOrderStatus = "pending" | "paid" | "failed" | "cancelled" | "expired";
 export type AdminPaymentMethod = "wave" | "orange_money" | "cash";
 
-export type AdminTicket = { code: string; label: string; holder: string; usedAt?: string };
+export type AdminTicket = { code: string; label: string; holder: string; usedAt?: string; pack?: PackChoice };
 
 export type AdminOrder = {
   id: string;
@@ -121,6 +125,7 @@ export type AdminOrder = {
   paymentMethod: AdminPaymentMethod;
   buyer: { name: string; phone: string; email?: string };
   items: { tierId: string; label: string; quantity: number; unitPrice: number; seats: number }[];
+  packs?: PackChoice[];
   total: number;
   createdAt: string;
   updatedAt: string;
@@ -204,6 +209,8 @@ export const adminApi = {
     method: AdminPaymentMethod;
   }) => json<AdminOrder>("/orders", { method: "POST", body: JSON.stringify(input) }),
   markPaid: (id: string) => json<AdminOrder>(`/orders/${encodeURIComponent(id)}/mark-paid`, { method: "POST" }),
+  setOrderPacks: (id: string, packs: PackChoice[]) =>
+    json<AdminOrder>(`/orders/${encodeURIComponent(id)}/packs`, { method: "PUT", body: JSON.stringify({ packs }) }),
   cancelOrder: (id: string) => json<AdminOrder>(`/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
   async exportCsv(f: OrderFilter = {}) {
     const res = await request(`/orders/export.csv${qs(f)}`);

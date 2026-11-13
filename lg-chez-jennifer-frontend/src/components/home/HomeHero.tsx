@@ -6,7 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useGSAP } from "@gsap/react";
-import { PassButton, GhostButton, StringLights, Heart } from "@/components/ui";
+import { PassButton, GhostButton, StringLights } from "@/components/ui";
 import { ArrowDownIcon } from "@/components/icons";
 
 gsap.registerPlugin(ScrollTrigger, SplitText, useGSAP);
@@ -117,9 +117,8 @@ export function HomeHero() {
       <div className="hh-screen pointer-events-none absolute right-[13%] top-[24%] hidden w-[30vw] max-w-[440px] lg:block">
         <div className="relative aspect-[16/10] rounded-sm bg-[linear-gradient(160deg,#fbeee2,#f1d9c3)] shadow-[0_0_80px_10px_rgba(255,214,170,0.35),0_0_220px_40px_rgba(255,190,130,0.18)]">
           <div className="absolute inset-[6px] flex flex-col items-center justify-center border border-cacao/10">
-            <span className="t-script text-5xl text-cacao/80 xl:text-6xl">Les Soirées</span>
-            <span className="t-caps mt-1 text-lg tracking-[0.18em] text-cacao/70 xl:text-xl">chez Jeynnifer</span>
-            <Heart className="mt-3 h-4 w-4 text-wine/60" />
+            {/* le logo officiel projeté sur l'écran */}
+            <Image src="/brand/logo-dark.png" alt="" width={997} height={563} priority className="h-auto w-[62%]" />
           </div>
         </div>
         <div className="mx-auto h-[18vh] w-[3px] bg-linear-to-b from-[#2a1d16] to-transparent" />

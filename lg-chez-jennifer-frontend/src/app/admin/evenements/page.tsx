@@ -16,7 +16,7 @@ export default function AdminEventsPage() {
         title="Éditions"
         sub="Chaque soirée mise en vente : date, lieu, passes et capacité. Seules les éditions « En ligne » apparaissent sur le site."
         actions={
-          <Link href="/admin/evenements/nouveau" className="inline-flex h-11 items-center gap-2 rounded-full bg-peach px-5 text-sm font-semibold text-cacao hover:bg-[#ffd9bd]">
+          <Link href="/admin/evenements/nouveau" className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-bright">
             <PlusIcon /> Nouvelle édition
           </Link>
         }

@@ -43,7 +43,7 @@ export function EventsBrowser({ events, initial }: { events: EventEdition[]; ini
               aria-selected={active}
               onClick={() => select(t.id)}
               className={`inline-flex items-center gap-2.5 rounded-full border px-5 py-2.5 text-sm font-semibold transition-all duration-300 ${
-                active ? "border-peach bg-peach text-cacao" : "border-line-strong text-paper-muted hover:border-paper/50 hover:text-paper"
+                active ? "border-peach bg-brand text-white" : "border-line-strong text-paper-muted hover:border-paper/50 hover:text-paper"
               }`}
             >
               {t.accent && <span className="h-2 w-2 rounded-full" style={{ background: t.accent }} />}

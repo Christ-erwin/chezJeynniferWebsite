@@ -76,6 +76,11 @@ export class AdminController {
     return this.orders.markPaid(id);
   }
 
+  @Put('orders/:id/packs')
+  setPacks(@Param('id') id: string, @Body() body: { packs?: unknown }) {
+    return this.orders.setPacks(id, body?.packs);
+  }
+
   @Post('orders/:id/cancel')
   @HttpCode(200)
   cancel(@Param('id') id: string) {

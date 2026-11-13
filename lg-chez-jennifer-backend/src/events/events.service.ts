@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { JsonCollection } from '../common/json-collection.js';
-import { CONCEPTS, type ConceptSlug, type EventRecord, type EventStatus, type PassTier } from './event.types.js';
+import { CONCEPTS, type ConceptSlug, type EventPack, type EventRecord, type EventStatus, type PassTier } from './event.types.js';
 import { seedEvents } from './events.seed.js';
 
 const STATUSES: EventStatus[] = ['draft', 'published', 'cancelled'];
@@ -32,14 +32,37 @@ export function slugify(s: string): string {
     .slice(0, 60);
 }
 
+/** Liste de textes courts, sans doublons ni vides. */
+function list(v: unknown, field: string, max: number, maxLen: number): string[] {
+  const items = (Array.isArray(v) ? v : [])
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.trim().slice(0, maxLen))
+    .filter(Boolean);
+  const unique = [...new Set(items)];
+  if (unique.length > max) throw new BadRequestException(`${field} : ${max} au maximum.`);
+  return unique;
+}
+
+function parsePack(raw: unknown): EventPack | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const p = raw as Record<string, unknown>;
+  const styles = list(p.styles, 'Pack — modèles', 6, 50);
+  const sizes = list(p.sizes, 'Pack — tailles', 10, 10);
+  if (styles.length === 0 || sizes.length === 0) throw new BadRequestException('Pack offert : indique au moins un modèle et une taille.');
+  return { label: str(p.label, 'Pack — nom', { max: 60 }), styles, sizes };
+}
+
 /** Valide et normalise une édition envoyée par l'admin. */
 function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'createdAt' | 'updatedAt'> {
   const concepts = Array.isArray(raw.concepts) ? raw.concepts : [];
   if (concepts.length === 0 || !concepts.every((c) => CONCEPTS.includes(c as ConceptSlug))) {
-    throw new BadRequestException('Choisis au moins un univers (Game Night, Loup-Garou, CinéLune).');
+    throw new BadRequestException('Choisis au moins un univers (Game Night, Loup-Garou, CinéLune, Beach Party).');
   }
   const startISO = str(raw.startISO, 'Date et heure');
   if (Number.isNaN(Date.parse(startISO))) throw new BadRequestException('Date et heure invalides.');
+
+  const salesOpenAt = str(raw.salesOpenAt, 'Ouverture de la billetterie', { optional: true, max: 40 });
+  if (salesOpenAt && Number.isNaN(Date.parse(salesOpenAt))) throw new BadRequestException('Ouverture de la billetterie : date invalide.');
 
   const venueRaw = (raw.venue ?? {}) as Record<string, unknown>;
   const status = (raw.status ?? 'draft') as EventStatus;
@@ -86,6 +109,8 @@ function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'cre
     },
     cover,
     capacity: int(raw.capacity, 'Capacité', 1, 5000),
+    salesOpenAt: salesOpenAt ? new Date(salesOpenAt).toISOString() : undefined,
+    pack: parsePack(raw.pack),
     status,
     note: str(raw.note, 'Note', { optional: true, max: 400 }) || undefined,
     tiers,

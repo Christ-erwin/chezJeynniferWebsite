@@ -26,7 +26,7 @@ export default function AdminDashboard() {
         actions={
           <>
             <Button size="sm" onClick={reload} aria-label="Actualiser"><RefreshIcon /> Actualiser</Button>
-            <Link href="/admin/evenements/nouveau" className="inline-flex h-9 items-center gap-2 rounded-full bg-peach px-3.5 text-sm font-semibold text-cacao hover:bg-[#ffd9bd]">
+            <Link href="/admin/evenements/nouveau" className="inline-flex h-9 items-center gap-2 rounded-full bg-brand px-3.5 text-sm font-semibold text-white hover:bg-brand-bright">
               <PlusIcon /> Nouvelle édition
             </Link>
           </>
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
               <div className="mt-5 flex h-32 items-end gap-1.5" role="img" aria-label={`Ventes sur 14 jours : ${fcfa(s.days.reduce((a, d) => a + d.revenue, 0))}`}>
                 {s.days.map((d) => (
                   <div key={d.date} className="group relative flex h-full flex-1 items-end">
-                    <div className="w-full rounded-t-md bg-peach/80 transition-colors group-hover:bg-peach" style={{ height: `${Math.max(3, (d.revenue / maxDay) * 100)}%`, opacity: d.revenue ? 1 : 0.25 }} />
+                    <div className="w-full rounded-t-md bg-peach/80 transition-colors group-hover:bg-brand" style={{ height: `${Math.max(3, (d.revenue / maxDay) * 100)}%`, opacity: d.revenue ? 1 : 0.25 }} />
                     <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-cream px-2 py-1 text-xs font-semibold text-cacao group-hover:block">
                       {new Date(d.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} · {fcfa(d.revenue)}
                     </span>

@@ -174,7 +174,7 @@ export function RoleDeck() {
       <div className="relative flex min-h-[460px] items-center justify-center [perspective:1400px] sm:min-h-[520px]">
         <div
           className="rd-glow pointer-events-none absolute h-[min(420px,100vw)] w-[min(420px,100vw)] rounded-full opacity-0 blur-3xl"
-          style={{ background: wolf ? "radial-gradient(circle, rgba(200,38,47,0.45), transparent 65%)" : "radial-gradient(circle, rgba(246,201,167,0.35), transparent 65%)" }}
+          style={{ background: wolf ? "radial-gradient(circle, rgba(200,38,47,0.45), transparent 65%)" : "radial-gradient(circle, rgba(233,196,143,0.35), transparent 65%)" }}
         />
 
         {/* paquet */}

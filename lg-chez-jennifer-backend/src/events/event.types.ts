@@ -1,4 +1,4 @@
-export const CONCEPTS = ['game-night', 'loup-garou', 'cine-lune'] as const;
+export const CONCEPTS = ['game-night', 'loup-garou', 'cine-lune', 'beach-party'] as const;
 export type ConceptSlug = (typeof CONCEPTS)[number];
 
 export type EventStatus = 'draft' | 'published' | 'cancelled';
@@ -14,6 +14,9 @@ export type PassTier = {
   perks: string[];
 };
 
+/** Pack offert à chaque participant : modèle et taille choisis à la réservation, pour chaque place. */
+export type EventPack = { label: string; styles: string[]; sizes: string[] };
+
 export type EventRecord = {
   id: string;
   title: string;
@@ -26,6 +29,9 @@ export type EventRecord = {
   venue: { name: string; city: string; address?: string; revealedAfterBooking: boolean };
   cover: string;
   capacity: number;
+  /** ouverture de la billetterie en ligne (ISO) : avant, l'édition est visible mais pas encore en vente */
+  salesOpenAt?: string;
+  pack?: EventPack;
   status: EventStatus;
   note?: string;
   tiers: PassTier[];

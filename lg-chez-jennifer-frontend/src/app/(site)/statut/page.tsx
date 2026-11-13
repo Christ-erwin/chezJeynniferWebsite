@@ -47,11 +47,11 @@ export default async function StatutPage() {
 
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-sm">
           <dt className="text-paper-dim">Endpoint</dt>
-          <dd className="text-paper-muted">{API_BASE_URL}/health</dd>
+          <dd className="text-paper-muted [overflow-wrap:anywhere]">{API_BASE_URL}/health</dd>
           {state.ok ? (
             <>
               <dt className="text-paper-dim">Service</dt>
-              <dd className="text-paper-muted">{state.data.service}</dd>
+              <dd className="text-paper-muted [overflow-wrap:anywhere]">{state.data.service}</dd>
               <dt className="text-paper-dim">Horodatage</dt>
               <dd className="text-paper-muted">{state.data.timestamp}</dd>
             </>

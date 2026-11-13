@@ -97,7 +97,7 @@ export function PageHead({ title, sub, actions }: { title: string; sub?: ReactNo
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger"; size?: "sm" | "md" };
 export function Button({ variant = "ghost", size = "md", className = "", ...rest }: BtnProps) {
   const v = {
-    primary: "bg-peach text-cacao hover:bg-[#ffd9bd]",
+    primary: "bg-brand text-white hover:bg-brand-bright",
     ghost: "border border-line-strong text-paper hover:border-peach hover:text-peach",
     danger: "border border-rose-400/40 text-rose-300 hover:bg-rose-400/10",
   }[variant];
@@ -148,7 +148,7 @@ export function FillBar({ sold, pending = 0, capacity }: { sold: number; pending
   const pct = (n: number) => `${Math.min(100, (n / Math.max(1, capacity)) * 100)}%`;
   return (
     <div className="flex h-2 overflow-hidden rounded-full bg-paper/8" role="img" aria-label={`${sold} places vendues sur ${capacity}${pending ? `, ${pending} en attente` : ""}`}>
-      <div className="h-full bg-peach" style={{ width: pct(sold) }} />
+      <div className="h-full bg-brand" style={{ width: pct(sold) }} />
       <div className="h-full bg-peach/35" style={{ width: pct(pending) }} />
     </div>
   );

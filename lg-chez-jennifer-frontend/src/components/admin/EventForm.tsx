@@ -12,6 +12,7 @@ const COVERS = [
   "ev-halloween.jpg", "ev-gn.jpg", "ev-cine.jpg", "lg-scene.jpg", "lg-moon.jpg", "lg-group.png", "lg-cards.png",
   "gn-table.jpg", "gn-friends.jpg", "gn-jenga.jpg", "gn-drinks.jpg", "gn-boxes.jpg",
   "cine-garden.jpg", "cine-wide.jpg", "cine-popcorn.jpg", "cine-small.jpg",
+  "bp-affiche-noel.jpg", "bp-sunset.jpg", "bp-feu.jpg", "bp-billets.jpg", "bp-affiche-enfance.jpg", "bp-affiche-infos.jpg",
 ].map((n) => `/images/${n}`);
 
 type TierDraft = { key: string; id?: string; label: string; price: string; seats: string; description: string; perks: string };
@@ -36,6 +37,12 @@ function toDraft(e?: AdminEvent) {
     revealed: e?.venue.revealedAfterBooking ?? true,
     cover: e?.cover ?? COVERS[0],
     capacity: String(e?.capacity ?? 60),
+    salesDate: e?.salesOpenAt?.slice(0, 10) ?? "",
+    salesTime: e?.salesOpenAt?.slice(11, 16) ?? "10:00",
+    packOn: !!e?.pack,
+    packLabel: e?.pack?.label ?? "Pack personnalisé",
+    packStyles: e?.pack?.styles.join("\n") ?? "T-shirt noir (garçon)\nCrop top noir (fille)",
+    packSizes: e?.pack?.sizes.join(", ") ?? "XS, S, M, L, XL, XXL",
     status: e?.status ?? ("draft" as EventStatus),
     note: e?.note ?? "",
     tiers: (e?.tiers.length
@@ -76,6 +83,14 @@ export function EventForm({ event }: { event?: AdminEvent }) {
       venue: { name: d.venueName, city: d.city, address: d.address || undefined, revealedAfterBooking: d.revealed },
       cover: d.cover,
       capacity: Number(d.capacity),
+      salesOpenAt: d.salesDate ? `${d.salesDate}T${d.salesTime || "00:00"}:00.000Z` : undefined,
+      pack: d.packOn
+        ? {
+            label: d.packLabel,
+            styles: d.packStyles.split("\n").map((s) => s.trim()).filter(Boolean),
+            sizes: d.packSizes.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean),
+          }
+        : undefined,
       status: d.status,
       note: d.note || undefined,
       tiers: d.tiers.map((t) => ({
@@ -152,9 +167,38 @@ export function EventForm({ event }: { event?: AdminEvent }) {
             <Field label="Ouverture des portes">{(id) => <Input id={id} value={d.doors} onChange={(e) => set("doors", e.target.value)} placeholder="19h00" maxLength={20} />}</Field>
             <Field label="Fin (affichée)">{(id) => <Input id={id} value={d.endLabel} onChange={(e) => set("endLabel", e.target.value)} placeholder="00h00" maxLength={20} />}</Field>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Ouverture de la billetterie" hint="Facultatif. Avant cette date, l'édition est annoncée sur le site mais pas encore en vente.">
+              {(id) => <Input id={id} type="date" value={d.salesDate} onChange={(e) => set("salesDate", e.target.value)} />}
+            </Field>
+            <Field label="Heure d'ouverture" hint="Heure d'Abidjan.">
+              {(id) => <Input id={id} type="time" value={d.salesTime} onChange={(e) => set("salesTime", e.target.value)} disabled={!d.salesDate} />}
+            </Field>
+          </div>
           <Field label="Note pour les invités" hint="Dress code, consignes… Affichée sur la page de réservation.">
             {(id) => <Textarea id={id} rows={2} value={d.note} onChange={(e) => set("note", e.target.value)} maxLength={400} />}
           </Field>
+        </Card>
+
+        <Card className="space-y-5 p-5 sm:p-6">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" checked={d.packOn} onChange={(e) => set("packOn", e.target.checked)} className="mt-1 h-4 w-4 accent-[#ffc4a0]" />
+            <span>
+              <span className="block text-lg font-semibold text-paper">Pack offert</span>
+              <span className="block text-sm text-paper-muted">T-shirt, crop top… À la réservation, chaque place choisit son modèle et sa taille.</span>
+            </span>
+          </label>
+          {d.packOn && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nom du pack">{(id) => <Input id={id} value={d.packLabel} onChange={(e) => set("packLabel", e.target.value)} maxLength={60} />}</Field>
+              <Field label="Tailles" hint="Séparées par des virgules.">
+                {(id) => <Input id={id} value={d.packSizes} onChange={(e) => set("packSizes", e.target.value)} placeholder="S, M, L, XL" />}
+              </Field>
+              <Field label="Modèles" hint="Un par ligne." className="sm:col-span-2">
+                {(id) => <Textarea id={id} rows={3} value={d.packStyles} onChange={(e) => set("packStyles", e.target.value)} />}
+              </Field>
+            </div>
+          )}
         </Card>
 
         <Card className="space-y-5 p-5 sm:p-6">

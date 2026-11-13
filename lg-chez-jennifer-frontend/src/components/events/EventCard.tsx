@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { type EventEdition, conceptNames, dateParts, formatPrice } from "@/lib/catalog";
+import { type EventEdition, conceptNames, dateParts, formatPrice, salesOpenLabel } from "@/lib/catalog";
 import { PinIcon, ClockIcon } from "@/components/icons";
 
 /**
@@ -12,6 +12,7 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
   const from = Math.min(...event.tiers.map((t) => t.price));
   const soldOut = event.remaining <= 0;
   const few = !soldOut && event.remaining <= Math.max(5, Math.ceil(event.capacity * 0.15));
+  const soon = !event.salesOpen && event.salesOpenAt ? salesOpenLabel(event.salesOpenAt) : null;
 
   return (
     <article
@@ -33,7 +34,10 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
           <span className="t-display text-2xl font-semibold leading-none">{day}</span>
           <span className="text-[0.62rem] font-bold tracking-[0.16em]">{month}</span>
         </div>
-        {(soldOut || few) && (
+        {soon && !soldOut && (
+          <span className="absolute right-4 top-4 rounded-full bg-night/85 px-3 py-1 text-xs font-bold text-peach backdrop-blur">Billetterie le {soon.replace(/^\S+ /, "")}</span>
+        )}
+        {!soon && (soldOut || few) && (
           <span className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${soldOut ? "bg-night/85 text-paper" : "bg-ember text-cacao"}`}>
             {soldOut ? "Complet" : `Plus que ${event.remaining} place${event.remaining > 1 ? "s" : ""}`}
           </span>
@@ -58,8 +62,8 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
           <p className="text-sm text-paper-muted">
             dès <span className="font-semibold text-paper">{formatPrice(from)}</span>
           </p>
-          <span aria-hidden className="pointer-events-none relative inline-flex items-center rounded-full bg-peach px-5 py-2.5 text-sm font-semibold text-cacao transition-colors group-hover:bg-[#ffd9bd]">
-            {soldOut ? "Complet" : "Prendre mon pass"}
+          <span aria-hidden className="pointer-events-none relative inline-flex items-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors group-hover:bg-brand-bright">
+            {soldOut ? "Complet" : soon ? "Bientôt en vente" : "Prendre mon pass"}
           </span>
         </div>
       </div>

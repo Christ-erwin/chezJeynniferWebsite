@@ -55,7 +55,7 @@ export function Header() {
     >
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-6 px-5 py-3 sm:px-8 lg:py-4">
         <Link href="/" aria-label="Les Soirées chez Jeynnifer — accueil" className="text-[0.95rem] sm:text-base">
-          <Logo />
+          <Logo className="text-[1.05rem] sm:text-[1.2rem]" />
         </Link>
 
         <nav aria-label="Navigation principale" className="hidden items-center gap-8 lg:flex">
@@ -63,7 +63,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className={`relative py-1 text-[0.88rem] font-medium transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-peach after:transition-transform after:duration-500 ${
+              className={`relative py-1 text-[0.88rem] font-medium transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:bg-brand after:transition-transform after:duration-500 ${
                 isActive(item.href)
                   ? "text-paper after:scale-x-100"
                   : "text-paper-muted after:scale-x-0 hover:text-paper hover:after:scale-x-100"

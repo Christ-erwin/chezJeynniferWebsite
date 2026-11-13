@@ -10,6 +10,7 @@ Site Next.js 16 (App Router) + Tailwind v4 + GSAP (ScrollTrigger, SplitText) + L
 | `/game-night` | Monde Game Night : cartes flottantes, éventail des jeux, dé 3D « brise-glace » |
 | `/loup-garou` | Monde Loup-Garou : nuit au village épinglée (desktop), « Tire ta carte », cycle jour/nuit |
 | `/cine-lune` | Monde CinéLune : cinéma en plein air, l'écran s'allume puis remplit la vue, pellicule au scroll |
+| `/beach-party` | Monde Beach Party : coucher de soleil sur la plage (la nuit tombe au scroll), parcours des 24 h, « Retour en enfance », la nuit, le Confessionnal, les affiches de l'édition |
 | `/evenements` | Calendrier, filtre par univers (`?soiree=game-night`) |
 | `/reserver/[id]` | Réservation : passes → infos → Wave / Orange Money |
 | `/reserver/confirmation/[orderId]` | Statut de paiement + billets QR code |

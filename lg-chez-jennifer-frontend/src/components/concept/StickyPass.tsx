@@ -38,7 +38,7 @@ export function StickyPass({ label, from, accent }: { label: string; from?: stri
           {label}
           {from && <span className="ml-2 hidden text-paper-dim sm:inline">dès {from}</span>}
         </span>
-        <span className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-peach px-4 py-2.5 text-sm font-semibold text-cacao">
+        <span className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white">
           <TicketIcon className="h-4 w-4" /> Prendre mon pass
         </span>
       </Link>

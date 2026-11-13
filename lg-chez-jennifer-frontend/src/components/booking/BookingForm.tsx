@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { type EventEdition, formatPrice } from "@/lib/catalog";
+import { type EventEdition, type PackChoice, formatPrice } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/components/PaymentBadges";
 import { CheckIcon, LockIcon, MinusIcon, PlusIcon } from "@/components/icons";
@@ -30,12 +30,24 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [method, setMethod] = useState<PaymentMethod | null>(null);
+  // pack offert : un choix (modèle + taille) par place, gardé même si on retire puis remet une place
+  const [packs, setPacks] = useState<PackChoice[]>([]);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const seats = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.seats, 0);
   const total = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.price, 0);
+  const pack = event.pack;
+  const seatPacks = useMemo(() => Array.from({ length: pack ? seats : 0 }, (_, i) => packs[i] ?? { style: "", size: "" }), [pack, seats, packs]);
+  const setPack = (i: number, patch: Partial<PackChoice>) =>
+    setPacks((p) => {
+      const next = [...p];
+      next[i] = { ...(next[i] ?? { style: "", size: "" }), ...patch };
+      return next;
+    });
+  /** numéros des étapes : le pack s'insère après les passes */
+  const n = pack ? { infos: 3, pay: 4 } : { infos: 2, pay: 3 };
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -46,8 +58,9 @@ export function BookingForm({ event }: { event: EventEdition }) {
     if (!phoneOk(phone)) e.phone = "Numéro à 10 chiffres, ex. 07 07 07 07 07.";
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Adresse e-mail invalide.";
     if (!method) e.method = "Choisis Wave ou Orange Money.";
+    if (pack && seatPacks.some((p) => !p.style || !p.size)) e.packs = `Choisis le modèle et la taille pour ${seats > 1 ? "chaque place" : "ton pack"}.`;
     return e;
-  }, [seats, maxSeats, name, phone, email, method]);
+  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks]);
 
   const show = (k: string) => (touched[k] || touched.submit) && errors[k];
 
@@ -69,6 +82,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
         items: event.tiers.map((t) => ({ tierId: t.id, quantity: qty[t.id] ?? 0 })).filter((i) => i.quantity > 0),
         buyer: { name: name.trim(), phone, ...(email ? { email: email.trim() } : {}) },
         paymentMethod: method!,
+        ...(pack ? { packs: seatPacks } : {}),
       });
       try {
         sessionStorage.setItem("jey:last-order", res.order.id);
@@ -135,10 +149,47 @@ export function BookingForm({ event }: { event: EventEdition }) {
           {show("items") && <FieldError>{errors.items}</FieldError>}
         </fieldset>
 
-        {/* 2 — infos */}
+        {/* 2 — pack offert (éditions qui en proposent un) */}
+        {pack && seats > 0 && (
+          <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
+            <legend className="sr-only">{pack.label}</legend>
+            <StepTitle n={2} title={seats > 1 ? "Vos packs" : "Ton pack"} hint={`${pack.label} offert avec chaque place : choisis le modèle et la taille.`} />
+            <ul className="mt-6 space-y-4">
+              {seatPacks.map((p, i) => (
+                <li key={i} className="rounded-2xl border border-line p-4 sm:p-5">
+                  {seats > 1 && <p className="mb-3 text-sm font-semibold text-paper">Place {i + 1}{i === 0 ? " (toi)" : ""}</p>}
+                  <div
+                    className="flex flex-wrap gap-2 outline-none"
+                    role="radiogroup"
+                    aria-label={`Modèle — place ${i + 1}`}
+                    tabIndex={-1}
+                    aria-invalid={!!show("packs") && (!p.style || !p.size)}
+                  >
+                    {pack.styles.map((s) => (
+                      <Chip key={s} active={p.style === s} onClick={() => setPack(i, { style: s })}>
+                        {s}
+                      </Chip>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={`Taille — place ${i + 1}`}>
+                    <span className="mr-1 text-xs text-paper-dim">Taille</span>
+                    {pack.sizes.map((s) => (
+                      <Chip key={s} small active={p.size === s} onClick={() => setPack(i, { size: s })}>
+                        {s}
+                      </Chip>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {show("packs") && <FieldError>{errors.packs}</FieldError>}
+          </fieldset>
+        )}
+
+        {/* infos */}
         <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
           <legend className="sr-only">Tes informations</legend>
-          <StepTitle n={2} title="Tes infos" hint="Ton billet est lié à ce numéro." />
+          <StepTitle n={n.infos} title="Tes infos" hint="Ton billet est lié à ce numéro." />
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <Field label="Nom et prénom" error={show("name") ? errors.name : undefined} className="sm:col-span-2">
               <input
@@ -184,7 +235,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
         {/* 3 — paiement */}
         <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
           <legend className="sr-only">Moyen de paiement</legend>
-          <StepTitle n={3} title="Paiement" hint="Directement depuis ton téléphone." />
+          <StepTitle n={n.pay} title="Paiement" hint="Directement depuis ton téléphone." />
           <div className="mt-6 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Moyen de paiement" aria-invalid={!!show("method")}>
             {PAYMENT_METHODS.map((m) => {
               const active = method === m.id;
@@ -196,7 +247,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
                   aria-checked={active}
                   onClick={() => setMethod(m.id)}
                   className={`relative flex items-center gap-4 rounded-2xl border p-5 text-left transition-all duration-300 ${
-                    active ? "border-transparent bg-paper text-cacao shadow-[0_14px_40px_-16px_rgba(246,201,167,0.5)]" : "border-line hover:border-line-strong"
+                    active ? "border-transparent bg-paper text-cacao shadow-[0_14px_40px_-16px_rgba(227,9,43,0.5)]" : "border-line hover:border-line-strong"
                   }`}
                 >
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-black" style={{ background: m.color, color: m.ink }}>
@@ -233,6 +284,13 @@ export function BookingForm({ event }: { event: EventEdition }) {
                 </li>
               ))}
             {seats === 0 && <li className="text-cacao-muted">Aucun pass sélectionné.</li>}
+            {pack &&
+              seatPacks.map((p, i) => (
+                <li key={`pack-${i}`} className="flex justify-between gap-4 text-cacao-muted">
+                  <span>{pack.label}{seats > 1 ? ` ${i + 1}` : ""}</span>
+                  <span>{p.style && p.size ? `${p.style} · ${p.size}` : "à choisir"}</span>
+                </li>
+              ))}
           </ul>
           <div className="mt-5 flex items-baseline justify-between border-t border-cacao-line pt-5">
             <span className="text-sm">
@@ -272,10 +330,26 @@ export function BookingForm({ event }: { event: EventEdition }) {
 }
 
 /* -------------------------------------------------------------------------- */
+function Chip({ active, small, onClick, children }: { active: boolean; small?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={onClick}
+      className={`rounded-full border font-semibold transition-colors ${small ? "min-w-11 px-3 py-2 text-sm" : "px-4 py-2.5 text-sm"} ${
+        active ? "border-transparent bg-paper text-cacao" : "border-line-strong text-paper-muted hover:border-peach hover:text-paper"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function StepTitle({ n, title, hint }: { n: number; title: string; hint?: string }) {
   return (
     <div className="flex items-center gap-4">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-peach text-sm font-bold text-cacao">{n}</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">{n}</span>
       <div>
         <p className="t-display text-3xl text-paper">{title}</p>
         {hint && <p className="text-sm text-paper-dim">{hint}</p>}

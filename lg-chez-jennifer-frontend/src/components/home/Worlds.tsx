@@ -15,6 +15,7 @@ const GLOW: Record<string, string> = {
   "game-night": "rgba(240,160,75,0.22)",
   "loup-garou": "rgba(200,38,47,0.26)",
   "cine-lune": "rgba(200,192,255,0.2)",
+  "beach-party": "rgba(255,154,82,0.24)",
 };
 
 /**

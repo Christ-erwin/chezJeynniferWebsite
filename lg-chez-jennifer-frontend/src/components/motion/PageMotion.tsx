@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
@@ -167,7 +168,7 @@ export function PageMotion({ children }: { children: ReactNode }) {
         aria-hidden
         className="js-curtain pointer-events-none fixed inset-0 z-90 items-center justify-center bg-night"
       >
-        <span className="t-script text-5xl text-peach">Les Soirées</span>
+        <Image src="/brand/logo-light.png" alt="" width={997} height={563} priority className="h-auto w-[min(56vw,260px)]" />
       </div>
       {children}
     </div>

@@ -8,13 +8,13 @@ import "./globals.css";
  * démarrage du serveur de dev, ni au build.
  */
 
-// Titres : serif éditorial fin, très contrasté (esprit des visuels)
-const cormorant = localFont({
+// Titres : Didone très contrastée, comme le « SOIRÉES » du logo
+const bodoni = localFont({
   src: [
-    { path: "./fonts/cormorant-garamond.woff2", weight: "300 700", style: "normal" },
-    { path: "./fonts/cormorant-garamond-italic.woff2", weight: "300 700", style: "italic" },
+    { path: "./fonts/bodoni-moda.woff2", weight: "400 900", style: "normal" },
+    { path: "./fonts/bodoni-moda-italic.woff2", weight: "400 900", style: "italic" },
   ],
-  variable: "--font-cormorant",
+  variable: "--font-bodoni",
   display: "swap",
   fallback: ["Georgia", "Times New Roman", "serif"],
 });
@@ -38,7 +38,7 @@ const script = localFont({
 });
 
 const description =
-  "Les Soirées chez Jeynnifer : Game Night, Soirée Loup-Garou et CinéLune à Abidjan. Des soirées à taille humaine pour jouer, rire, regarder un film et vraiment se rencontrer. Réserve ton pass en ligne, paiement Wave ou Orange Money.";
+  "Les Soirées chez Jeynnifer : Game Night, Soirée Loup-Garou, CinéLune et Beach Party, à Abidjan et à la plage. Des soirées à taille humaine pour jouer, rire, regarder un film et vraiment se rencontrer. Réserve ton pass en ligne, paiement Wave ou Orange Money.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://chez-jeynnifer.example"),
@@ -47,19 +47,19 @@ export const metadata: Metadata = {
     template: "%s · Les Soirées chez Jeynnifer",
   },
   description,
-  keywords: ["soirée Abidjan", "Game Night", "Loup-Garou", "cinéma plein air", "CinéLune", "sortie", "Chez Jeynnifer"],
+  keywords: ["soirée Abidjan", "Game Night", "Loup-Garou", "cinéma plein air", "CinéLune", "Beach Party", "Assinie", "sortie", "Chez Jeynnifer"],
   openGraph: {
     title: "Les Soirées chez Jeynnifer",
     description,
     locale: "fr_FR",
     type: "website",
-    images: ["/images/og/cine-garden.jpg"],
+    images: ["/images/og/brand.jpg"],
   },
   twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d0907",
+  themeColor: "#0b0b0c",
   colorScheme: "dark",
 };
 
@@ -71,7 +71,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="fr"
-      className={`${cormorant.variable} ${manrope.variable} ${script.variable} antialiased`}
+      className={`${bodoni.variable} ${manrope.variable} ${script.variable} antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -80,7 +80,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         <a
           href="#contenu"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded-full focus:bg-peach focus:px-5 focus:py-2.5 focus:text-cacao"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded-full focus:bg-brand focus:px-5 focus:py-2.5 focus:text-white"
         >
           Aller au contenu
         </a>

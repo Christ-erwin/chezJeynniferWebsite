@@ -3,46 +3,56 @@
 /* ========================================================================== */
 /*  Les Soirées chez Jeynnifer — design tokens                                */
 /*                                                                            */
-/*  Un socle commun "soirée cosy" : nuit chaude (brun-noir), crème, pêche,    */
-/*  lueurs ambrées de guirlandes. Chaque concept teinte ce socle avec son     */
-/*  propre monde : ambre (Game Night), sang (Loup-Garou), lune (Ciné Lune).   */
-/*  Aucun néon froid, aucun code boîte de nuit.                              */
+/*  L'identité du logo officiel : noir profond, blanc, et le rouge du O et    */
+/*  du J (#FC0A2C). Chaque concept teinte ce socle avec son propre monde :    */
+/*  ambre (Game Night), rouge sang sombre (Loup-Garou), lune (CinéLune),      */
+/*  coucher de soleil (Beach Party). Les guirlandes gardent leur lueur chaude.*/
 /* ========================================================================== */
 @theme {
   /* nuit (fonds sombres) */
-  --color-night: #0d0907;
-  --color-night-2: #16100c;
-  --color-night-3: #201712;
-  --color-paper: #f5e9da; /* texte principal sur fond sombre */
-  --color-paper-muted: #c9b6a0;
-  --color-paper-dim: #9a8670;
-  --color-line: rgba(245, 225, 200, 0.12);
-  --color-line-strong: rgba(245, 225, 200, 0.22);
+  --color-night: #0b0b0c;
+  --color-night-2: #141415;
+  --color-night-3: #1e1e20;
+  --color-paper: #f6f3ef; /* texte principal sur fond sombre */
+  --color-paper-muted: #b9b3ac;
+  --color-paper-dim: #8b857e;
+  --color-line: rgba(255, 255, 255, 0.12);
+  --color-line-strong: rgba(255, 255, 255, 0.22);
 
-  /* crème (sections claires) */
-  --color-cream: #f7ece0;
-  --color-cream-2: #efdfcc;
-  --color-cacao: #2b1a14; /* texte sur crème */
-  --color-cacao-muted: #6b5446;
-  --color-cacao-line: rgba(43, 26, 20, 0.14);
+  /* blanc cassé (sections claires) */
+  --color-cream: #f5f2ee;
+  --color-cream-2: #ebe6df;
+  --color-cacao: #141213; /* texte sur fond clair (encre du logo) */
+  --color-cacao-muted: #5c5652;
+  --color-cacao-line: rgba(20, 18, 19, 0.14);
 
-  /* marque */
-  --color-peach: #f6c9a7;
-  --color-peach-deep: #eaae86;
+  /* marque : le rouge du logo */
+  --color-brand: #e3092b; /* boutons (texte blanc lisible) */
+  --color-brand-bright: #fc0a2c; /* rouge exact du logo */
+  --color-peach: #ff3048; /* accent rouge lisible sur fond noir (liens, libellés) */
+  --color-peach-deep: #e3092b;
   --color-ember: #e8a25a;
-  --color-wine: #6e1f2a;
+  --color-wine: #c4001f; /* rouge sur fond clair */
 
   /* mondes des concepts */
   --color-game: #f0a04b;
   --color-game-deep: #8a4b17;
-  --color-wolf: #c8262f;
-  --color-wolf-bright: #ff4552;
-  --color-wolf-deep: #4a0b10;
+  /* Loup-Garou : rouge sang plus sombre, pour ne pas se confondre avec la marque */
+  --color-wolf: #9e101b;
+  --color-wolf-bright: #e04a50;
+  --color-wolf-deep: #3a070c;
   --color-moon: #c8c0ff;
   --color-moon-deep: #2a2452;
   --color-screen: #e9e4ff;
+  /* Beach Party : le crépuscule des affiches (ciel violet, soleil orange, sable) */
+  --color-sunset: #ff9a52;
+  --color-sunset-deep: #c2491d;
+  --color-dusk: #150c1f;
+  --color-dusk-2: #21132e;
+  --color-sand: #f3dcb0;
+  --color-lagoon: #6fd0d6;
 
-  --font-display: var(--font-cormorant), "Cormorant", Georgia, serif;
+  --font-display: var(--font-bodoni), "Bodoni Moda", "Didot", Georgia, serif;
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-script: var(--font-script-face), "Segoe Script", cursive;
 
@@ -228,6 +238,45 @@
 .anim-card-in {
   animation: card-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* Beach Party : houle qui défile, reflet du soleil qui scintille */
+@keyframes wave-x {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.anim-wave {
+  animation: wave-x 14s linear infinite;
+}
+@keyframes glint {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scaleX(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+.anim-glint {
+  animation: glint 2.6s ease-in-out infinite;
+}
+@keyframes rec {
+  50% {
+    opacity: 0.15;
+  }
+}
+.anim-rec {
+  animation: rec 1.2s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-wave,
+  .anim-glint,
+  .anim-rec {
+    animation: none;
+  }
+}
+
 /* yeux qui clignent dans l'ombre (introduction de la partie) */
 @keyframes blink {
   0%,

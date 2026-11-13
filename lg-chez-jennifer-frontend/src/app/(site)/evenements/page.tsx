@@ -8,7 +8,7 @@ import { StringLights } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Événements",
-  description: "Toutes les prochaines soirées chez Jeynnifer : Game Night, Loup-Garou et CinéLune. Réserve ton pass, paiement Wave ou Orange Money.",
+  description: "Toutes les prochaines soirées chez Jeynnifer : Game Night, Loup-Garou, CinéLune et Beach Party. Réserve ton pass, paiement Wave ou Orange Money.",
 };
 
 export const revalidate = 30;

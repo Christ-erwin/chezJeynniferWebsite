@@ -4,7 +4,10 @@ export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'expired
 
 export type OrderItem = { tierId: string; label: string; quantity: number; unitPrice: number; seats: number };
 
-export type Ticket = { code: string; label: string; holder: string; usedAt?: string };
+/** Choix du pack offert pour une place (modèle + taille). */
+export type PackChoice = { style: string; size: string };
+
+export type Ticket = { code: string; label: string; holder: string; usedAt?: string; pack?: PackChoice };
 
 export type Order = {
   id: string;
@@ -17,6 +20,8 @@ export type Order = {
   paymentMethod: PaymentMethod;
   buyer: { name: string; phone: string; email?: string };
   items: OrderItem[];
+  /** un choix de pack par place, dans l'ordre des billets (éditions avec pack offert) */
+  packs?: PackChoice[];
   total: number;
   currency: 'XOF';
   createdAt: string;

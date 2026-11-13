@@ -127,7 +127,7 @@ export function Confirmation({ orderId }: { orderId: string }) {
       </div>
 
       <div className="text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-peach text-cacao">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white">
           <CheckIcon className="h-6 w-6" />
         </span>
         <p className="t-script mt-6 text-4xl text-peach">C&apos;est réservé !</p>
@@ -157,6 +157,7 @@ export function Confirmation({ orderId }: { orderId: string }) {
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-cacao-muted">{t.label}</p>
                 <p className="mt-1 font-semibold">{t.holder}</p>
+                {t.pack && <p className="mt-1 text-sm text-cacao-muted">Pack : {t.pack.style} · {t.pack.size}</p>}
                 <p className="mt-2 font-mono text-sm">{t.code}</p>
               </div>
               <QRCodeSVG value={t.code} size={96} bgColor="transparent" fgColor="#2b1a14" level="M" />
@@ -166,7 +167,7 @@ export function Confirmation({ orderId }: { orderId: string }) {
       </div>
 
       <div className="mt-12 flex flex-col justify-center gap-3 sm:flex-row print:hidden">
-        <button onClick={() => window.print()} className="inline-flex items-center justify-center rounded-full bg-peach px-7 py-3.5 font-semibold text-cacao">
+        <button onClick={() => window.print()} className="inline-flex items-center justify-center rounded-full bg-brand px-7 py-3.5 font-semibold text-white">
           Imprimer / enregistrer en PDF
         </button>
         <a href={whatsappLink(`Bonjour ! J'ai réservé (${order.reference}) pour ${order.eventTitle}.`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-paper/30 px-7 py-3.5 font-semibold text-paper hover:border-peach hover:text-peach">

@@ -69,5 +69,42 @@ export function seedEvents(): EventRecord[] {
       tiers: [solo(5000, ['Popcorn offert']), duo(9000, ['Popcorn offert x2'])],
       note: 'Plaids et coussins fournis. Le film est annoncé une semaine avant.',
     },
+    BEACH_PARTY_NOEL_2026(base),
   ];
 }
+
+/** Jeynnifer Beach Party, édition 01 : Spéciale Noël à Assinie (affiche du 12 → 13 décembre 2026). */
+export const BEACH_PARTY_NOEL_2026 = (base: Pick<EventRecord, 'status' | 'createdAt' | 'updatedAt'>): EventRecord => ({
+  ...base,
+  id: 'beach-party-noel-2026',
+  title: 'Beach Party · Spéciale Noël',
+  subtitle: 'Deux jours à Assinie pour déconnecter, s’amuser et replonger dans nos souvenirs d’enfance.',
+  concepts: ['beach-party', 'loup-garou', 'cine-lune'],
+  startISO: '2026-12-12T10:00:00+00:00',
+  doors: 'Départ 10h00',
+  endLabel: 'Dim. 13 · 10h00',
+  venue: { name: 'Assinie', city: 'Assinie', address: 'Départ en car depuis Abidjan : point de rendez-vous envoyé par WhatsApp', revealedAfterBooking: true },
+  cover: '/images/bp-affiche-noel.jpg',
+  capacity: 30,
+  salesOpenAt: '2026-11-16T10:00:00+00:00',
+  pack: { label: 'Pack personnalisé', styles: ['T-shirt noir (garçon)', 'Crop top noir (fille)'], sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+  tiers: [
+    {
+      id: 'beach-pass',
+      label: 'Pass Beach Party',
+      price: 60000,
+      seats: 1,
+      description: 'Le week-end complet, du départ d’Abidjan le samedi au retour le dimanche.',
+      perks: [
+        'Transport aller-retour en car',
+        'Balade et visite en bateau',
+        'Accès au site et espace de repos',
+        'Buffet du midi et barbecue du soir',
+        'Jeux, DJ et Loup-Garou au feu de camp',
+        'Cinéma en plein air',
+        'Pack personnalisé offert',
+      ],
+    },
+  ],
+  note: 'Départ d’Abidjan en car le samedi à 10h, retour le dimanche après 10h. Nuit sur place. Pack offert : t-shirt noir (garçons) ou crop top noir (filles).',
+});

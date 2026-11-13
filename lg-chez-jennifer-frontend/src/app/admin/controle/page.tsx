@@ -197,6 +197,11 @@ export default function CheckinPage() {
                 {r.ticket ? (
                   <>
                     {r.ticket.label} · <strong>{r.order?.buyer.name}</strong>
+                    {r.ok && r.ticket.pack && (
+                      <span className="mt-1 block text-sm text-peach">
+                        Pack à remettre : <strong>{r.ticket.pack.style} · {r.ticket.pack.size}</strong>
+                      </span>
+                    )}
                   </>
                 ) : (
                   <span className="font-mono">{last.code}</span>

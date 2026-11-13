@@ -40,7 +40,7 @@ export function CandleCursor() {
       className="pointer-events-none fixed left-0 top-0 z-60 hidden h-[420px] w-[420px] rounded-full opacity-0 mix-blend-soft-light transition-opacity duration-500 [@media(hover:hover)_and_(pointer:fine)]:block"
       style={{
         background:
-          "radial-gradient(circle, rgba(246,201,167,0.38) 0%, rgba(232,162,90,0.14) 35%, transparent 70%)",
+          "radial-gradient(circle, rgba(255,214,170,0.32) 0%, rgba(232,162,90,0.14) 35%, transparent 70%)",
       }}
     />
   );

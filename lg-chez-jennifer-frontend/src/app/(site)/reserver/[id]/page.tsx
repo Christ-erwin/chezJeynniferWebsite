@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { conceptNames, dateParts } from "@/lib/catalog";
 import { fetchEvent } from "@/lib/events";
 import { BookingForm } from "@/components/booking/BookingForm";
+import { SalesSoon } from "@/components/booking/SalesSoon";
 import { ArrowLeftIcon, CalendarIcon, ClockIcon, PinIcon } from "@/components/icons";
 
 export const revalidate = 30;
@@ -57,7 +58,9 @@ export default async function ReserverPage({ params }: PageProps<"/reserver/[id]
         </header>
 
         <div className="mt-12">
-          {event.remaining <= 0 ? (
+          {!event.salesOpen && event.salesOpenAt ? (
+            <SalesSoon event={event} opensAt={event.salesOpenAt} />
+          ) : event.remaining <= 0 ? (
             <p className="rounded-[1.4rem] border border-line bg-night-2 p-10 text-center text-paper-muted">
               Cette soirée affiche complet. <Link href="/evenements" className="text-peach underline">Voir les prochaines</Link>
             </p>

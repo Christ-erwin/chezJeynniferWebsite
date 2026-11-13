@@ -56,11 +56,13 @@ export type CreateOrderInput = {
   items: { tierId: string; quantity: number }[];
   buyer: { name: string; phone: string; email?: string };
   paymentMethod: PaymentMethod;
+  /** une entrée par place, pour les éditions avec pack offert */
+  packs?: { style: string; size: string }[];
 };
 
 export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "expired";
 
-export type Ticket = { code: string; label: string; holder: string };
+export type Ticket = { code: string; label: string; holder: string; pack?: { style: string; size: string } };
 
 export type Order = {
   id: string;

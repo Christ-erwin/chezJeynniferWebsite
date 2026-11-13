@@ -52,7 +52,7 @@ export async function ConceptEditions({
               href={whatsappLink(`Bonjour ! Préviens-moi de la prochaine ${concept.displayName} chez Jeynnifer.`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex rounded-full bg-peach px-7 py-3.5 font-semibold text-cacao"
+              className="mt-6 inline-flex rounded-full bg-brand px-7 py-3.5 font-semibold text-white"
             >
               Me prévenir
             </a>

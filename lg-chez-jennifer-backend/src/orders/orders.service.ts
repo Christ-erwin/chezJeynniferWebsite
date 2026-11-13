@@ -4,7 +4,7 @@ import { EventsService } from '../events/events.service.js';
 import type { EventRecord, PublicEvent } from '../events/event.types.js';
 import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment.provider.js';
 import { OrdersStore } from './orders.store.js';
-import type { Order, OrderItem, OrderStatus, PaymentMethod, PublicOrder, Ticket } from './order.types.js';
+import type { Order, OrderItem, OrderStatus, PackChoice, PaymentMethod, PublicOrder, Ticket } from './order.types.js';
 
 /** Une commande non payée bloque ses places pendant ce délai. */
 const HOLD_MS = 20 * 60 * 1000;
@@ -18,6 +18,7 @@ export type CreateOrderInput = {
   items?: unknown;
   buyer?: { name?: unknown; phone?: unknown; email?: unknown };
   paymentMethod?: unknown;
+  packs?: unknown;
 };
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O/1/I : lisible à l'oral
@@ -84,13 +85,18 @@ export class OrdersService {
     const event = typeof input.eventId === 'string' ? this.events.get(input.eventId) : undefined;
     if (!event || event.status !== 'published') throw new BadRequestException('Cette soirée est introuvable.');
     if (Date.parse(event.startISO) < Date.now()) throw new BadRequestException('Cette soirée est déjà passée.');
+    if (event.salesOpenAt && Date.parse(event.salesOpenAt) > Date.now()) {
+      const when = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Abidjan' }).format(new Date(event.salesOpenAt));
+      throw new BadRequestException(`La billetterie ouvre le ${when}.`);
+    }
 
     const items = this.parseItems(event, input.items, MAX_SEATS_PER_ORDER);
     const buyer = this.parseBuyer(input.buyer);
+    const packs = this.parsePacks(event, items, input.packs, true);
     const method = input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money') throw new BadRequestException('Choisis Wave ou Orange Money.');
 
-    const order = await this.reserve(event, items, buyer, method, this.provider.name);
+    const order = await this.reserve(event, items, buyer, method, this.provider.name, packs);
 
     try {
       const init = await this.provider.init(order);
@@ -166,9 +172,11 @@ export class OrdersService {
     if (event.status === 'cancelled') throw new BadRequestException('Cette édition est annulée.');
     const items = this.parseItems(event, input.items, 50);
     const buyer = this.parseBuyer(input.buyer);
+    // vente sur place : le pack peut être noté plus tard, mais s'il est donné il doit être valide
+    const packs = this.parsePacks(event, items, input.packs, false);
     const method = input.method ?? input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money' && method !== 'cash') throw new BadRequestException('Moyen de paiement invalide.');
-    const order = await this.reserve(event, items, buyer, method, 'manual');
+    const order = await this.reserve(event, items, buyer, method, 'manual', packs);
     return this.setStatus(order.id, 'paid', 'vente enregistrée par l’admin');
   }
 
@@ -183,6 +191,26 @@ export class OrdersService {
       await this.store.mutate(() => this.store.set({ ...o, status: 'pending' }));
     }
     return this.setStatus(id, 'paid', 'paiement validé manuellement');
+  }
+
+  /** Corrige les packs d'une commande (changement de taille, vente sur place…) ; les billets suivent. */
+  setPacks(id: string, raw: unknown): Promise<Order> {
+    return this.store.mutate(() => {
+      const o = this.getAdmin(id);
+      const event = this.events.require(o.eventId);
+      if (!event.pack) throw new BadRequestException('Cette édition n’a pas de pack offert.');
+      const packs = this.parsePacks(event, o.items, raw, true)!;
+      const now = new Date().toISOString();
+      const next: Order = {
+        ...o,
+        packs,
+        tickets: o.tickets.map((t, i) => ({ ...t, pack: packs[i] })),
+        updatedAt: now,
+        history: [...(o.history ?? []), { at: now, action: 'packs modifiés' }],
+      };
+      this.store.set(next);
+      return next;
+    });
   }
 
   /** Annule une commande (libère les places). Le remboursement se fait hors site. */
@@ -270,7 +298,7 @@ export class OrdersService {
       const s = String(v ?? '');
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés'];
+    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs'];
     const rows = orders.map((o) => [
       o.reference,
       o.status,
@@ -286,6 +314,7 @@ export class OrdersService {
       o.paidAt ?? '',
       o.tickets.map((t) => t.code).join(' '),
       o.tickets.filter((t) => t.usedAt).length,
+      (o.packs ?? []).map((p) => `${p.style} · ${p.size}`).join(' | '),
     ]);
     // BOM + point-virgule : s'ouvre proprement dans Excel en français
     return '﻿' + [head, ...rows].map((r) => r.map(esc).join(';')).join('\n');
@@ -308,6 +337,25 @@ export class OrdersService {
     return items;
   }
 
+  /**
+   * Un choix de pack (modèle + taille) par place. `required` : obligatoire pour
+   * les commandes en ligne d'une édition avec pack offert.
+   */
+  private parsePacks(event: EventRecord, items: OrderItem[], raw: unknown, required: boolean): PackChoice[] | undefined {
+    if (!event.pack) return undefined;
+    if (!Array.isArray(raw) || raw.length === 0) {
+      if (required) throw new BadRequestException(`Choisis le modèle et la taille du ${event.pack.label.toLowerCase()} pour chaque place.`);
+      return undefined;
+    }
+    const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
+    if (raw.length !== seats) throw new BadRequestException(`Il faut un choix de pack par place (${seats}).`);
+    return (raw as { style?: unknown; size?: unknown }[]).map((p, i) => {
+      if (typeof p?.style !== 'string' || !event.pack!.styles.includes(p.style)) throw new BadRequestException(`Place ${i + 1} : choisis le modèle du pack.`);
+      if (typeof p?.size !== 'string' || !event.pack!.sizes.includes(p.size)) throw new BadRequestException(`Place ${i + 1} : choisis la taille.`);
+      return { style: p.style, size: p.size };
+    });
+  }
+
   private parseBuyer(raw: CreateOrderInput['buyer']): Order['buyer'] {
     const name = typeof raw?.name === 'string' ? raw.name.trim().replace(/\s+/g, ' ') : '';
     if (name.length < 2 || name.length > 80) throw new BadRequestException('Indique ton nom et prénom.');
@@ -319,7 +367,7 @@ export class OrdersService {
   }
 
   /** Bloque les places sous verrou (pas de survente) et crée la commande en attente. */
-  private reserve(event: EventRecord, items: OrderItem[], buyer: Order['buyer'], method: PaymentMethod, provider: Order['provider']): Promise<Order> {
+  private reserve(event: EventRecord, items: OrderItem[], buyer: Order['buyer'], method: PaymentMethod, provider: Order['provider'], packs?: PackChoice[]): Promise<Order> {
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     return this.store.mutate(() => {
       this.expireStaleInMemory();
@@ -342,6 +390,7 @@ export class OrdersService {
         paymentMethod: method,
         buyer,
         items,
+        ...(packs ? { packs } : {}),
         total: items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
         currency: 'XOF',
         createdAt: now,
@@ -386,7 +435,8 @@ export class OrdersService {
     const tickets: Ticket[] = [];
     for (const item of order.items) {
       for (let i = 0; i < item.quantity * item.seats; i++) {
-        tickets.push({ code: `${order.reference}-${code(4)}`, label: item.label, holder: order.buyer.name });
+        const pack = order.packs?.[tickets.length];
+        tickets.push({ code: `${order.reference}-${code(4)}`, label: item.label, holder: order.buyer.name, ...(pack ? { pack } : {}) });
       }
     }
     return tickets;

@@ -6,7 +6,7 @@ const STEPS = [
   {
     icon: CalendarIcon,
     title: "Choisis ta soirée",
-    text: "Game Night, Loup-Garou ou CinéLune : parcours le calendrier et trouve la date qui te ressemble.",
+    text: "Game Night, Loup-Garou, CinéLune ou Beach Party : parcours le calendrier et trouve la date qui te ressemble.",
   },
   {
     icon: TicketIcon,

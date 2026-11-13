@@ -17,7 +17,7 @@ export function Concepts() {
           <div>
             <p className="t-label text-cacao-muted" data-reveal>Nos concepts</p>
             <h2 className="t-display mt-4 text-5xl text-cacao sm:text-6xl" data-split>
-              Trois univers, une même ambiance
+              Quatre univers, une même ambiance
             </h2>
             <Heart className="mt-4 text-wine" />
           </div>
@@ -32,7 +32,7 @@ export function Concepts() {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-3 [&>*]:min-w-0" data-stagger>
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4 [&>*]:min-w-0" data-stagger>
           {CONCEPTS.map((c) => (
             <Tilt key={c.slug} className="h-full">
               <Link
@@ -44,7 +44,7 @@ export function Concepts() {
                     src={c.cover}
                     alt=""
                     fill
-                    sizes="(min-width: 768px) 33vw, 100vw"
+                    sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition-transform duration-[1.6s] ease-(--ease-soft) group-hover:scale-[1.07]"
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-night via-night/40 to-transparent" />

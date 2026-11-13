@@ -1,15 +1,23 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { ArrowRightIcon } from "./icons";
 
 /* -------------------------------------------------------------------------- */
-/*  Logo — script "Les Soirées" + capitales "chez Jeynnifer"                  */
+/*  Logo officiel — blanc et rouge sur fond sombre, encre et rouge sur clair  */
 /* -------------------------------------------------------------------------- */
+/** Sa taille suit la taille de texte (`text-*`) passée en className. */
 export function Logo({ className = "", tone = "paper" }: { className?: string; tone?: "paper" | "cacao" }) {
   return (
-    <span className={`inline-flex flex-col leading-none ${tone === "cacao" ? "text-cacao" : "text-paper"} ${className}`}>
-      <span className={`t-script -mb-1 text-[1.65em] ${tone === "cacao" ? "text-wine" : "text-peach"}`}>Les Soirées</span>
-      <span className="t-caps whitespace-nowrap pl-[0.9em] text-[0.82em] tracking-[0.14em]">chez Jeynnifer</span>
+    <span className={`inline-block leading-none ${className}`}>
+      <Image
+        src={tone === "cacao" ? "/brand/logo-dark.png" : "/brand/logo-light.png"}
+        alt="Les Soirées chez Jeynnifer"
+        width={997}
+        height={563}
+        priority
+        className="h-[3em] w-auto"
+      />
     </span>
   );
 }
@@ -31,7 +39,7 @@ export function PassButton({ children, className = "", arrow = true, ...rest }: 
   return (
     <Link
       {...rest}
-      className={`${base} bg-peach px-7 py-3.5 text-cacao shadow-[0_10px_40px_-12px_rgba(246,201,167,0.55)] hover:bg-[#ffd9bd] hover:shadow-[0_14px_50px_-10px_rgba(246,201,167,0.7)] ${className}`}
+      className={`${base} bg-brand px-7 py-3.5 text-white shadow-[0_10px_40px_-12px_rgba(227,9,43,0.55)] hover:bg-brand-bright hover:shadow-[0_14px_50px_-10px_rgba(227,9,43,0.7)] ${className}`}
     >
       {children}
       {arrow && <ArrowRightIcon className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />}

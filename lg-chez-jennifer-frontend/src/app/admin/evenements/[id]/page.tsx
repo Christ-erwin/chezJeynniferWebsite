@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { adminApi, EVENT_STATUS } from "@/lib/admin-api";
 import { useLoad } from "@/components/admin/useLoad";
 import { EventForm } from "@/components/admin/EventForm";
+import { PacksSummary } from "@/components/admin/PacksSummary";
 import { Badge, ErrorNote, ExternalIcon, PageHead, Skeleton } from "@/components/admin/ui";
 
 export default function EditEventPage() {
@@ -40,6 +41,7 @@ export default function EditEventPage() {
               </>
             }
           />
+          {data.pack && <PacksSummary eventId={data.id} pack={data.pack} />}
           <EventForm key={data.updatedAt} event={data} />
         </>
       )}

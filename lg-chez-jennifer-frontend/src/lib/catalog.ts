@@ -3,14 +3,15 @@
  *
  * Reflète le schéma backend (lg-chez-jennifer-backend/sql/schema.sql) :
  *   concept (products) → édition (event_instances) → pass (ticket_tiers)
- * Une édition peut réunir plusieurs concepts (ex. Halloween = les trois).
+ * Une édition peut réunir plusieurs concepts (ex. Halloween = Game Night,
+ * Loup-Garou et CinéLune ; la Beach Party de Noël = plage, Loup-Garou et ciné).
  *
- * Les concepts (identité des 3 univers) sont fixes et vivent ici.
+ * Les concepts (identité des 4 univers) sont fixes et vivent ici.
  * Les éditions (dates, lieux, tarifs, capacités) sont gérées dans l'espace
  * admin et lues via l'API : voir src/lib/events.ts.
  */
 
-export type ConceptSlug = "game-night" | "loup-garou" | "cine-lune";
+export type ConceptSlug = "game-night" | "loup-garou" | "cine-lune" | "beach-party";
 
 export type Concept = {
   slug: ConceptSlug;
@@ -56,7 +57,7 @@ export const CONCEPTS: Concept[] = [
       "Plonge dans l'univers du célèbre jeu de rôle et fais preuve de stratégie, de persuasion et de beaucoup de sang-froid.",
     description:
       "L'expérience la plus immersive. Éditions en petit comité, places limitées, pour retrouver l'intensité du jeu : observer, mentir, enquêter, accuser, défendre son rôle, survivre. Qui est loup ? Qui dit la vérité ?",
-    accent: "#c8262f",
+    accent: "#b3141f",
     href: "/loup-garou",
     cover: "/images/lg-scene.jpg",
     gallery: ["/images/lg-cards.png", "/images/lg-group.png", "/images/lg-moon.jpg"],
@@ -77,6 +78,22 @@ export const CONCEPTS: Concept[] = [
     cover: "/images/cine-garden.jpg",
     gallery: ["/images/cine-popcorn.jpg", "/images/cine-small.jpg", "/images/cine-wide.jpg"],
   },
+  {
+    slug: "beach-party",
+    number: "04",
+    name: "Beach Party",
+    displayName: "Beach Party",
+    kicker: "Explorez le jour. Vibrez toute la nuit.",
+    tags: ["Plage", "Aventure", "Jeux", "Nuit sur place"],
+    pitch:
+      "24 heures d'aventure à la plage : excursion en bateau, jeux d'enfance, barbecue, DJ, feu de camp, cinéma sous les étoiles et nuit sur place.",
+    description:
+      "On part ensemble d'Abidjan le samedi matin, on revient le dimanche. Entre les deux : balade en bateau et découverte des îles, jeux et défis en équipes, sunset, DJ, barbecue, Loup-Garou autour du feu de camp et cinéma en plein air. Et un confessionnal, façon téléréalité, pour raconter l'aventure de l'intérieur.",
+    accent: "#ff9a52",
+    href: "/beach-party",
+    cover: "/images/bp-sunset.jpg",
+    gallery: ["/images/bp-feu.jpg", "/images/bp-billets.jpg", "/images/bp-affiche-enfance.jpg"],
+  },
 ];
 
 export function getConcept(slug: string): Concept | undefined {
@@ -93,6 +110,9 @@ export type PassTier = {
   description: string;
   perks: string[];
 };
+
+export type EventPack = { label: string; styles: string[]; sizes: string[] };
+export type PackChoice = { style: string; size: string };
 
 /**
  * Une édition telle que publiée par l'API (GET /api/events).
@@ -114,6 +134,12 @@ export type EventEdition = {
   remaining: number;
   tiers: PassTier[];
   note?: string;
+  /** ouverture de la billetterie en ligne (ISO) — avant, l'édition est annoncée mais pas encore en vente */
+  salesOpenAt?: string;
+  /** pack offert : modèle et taille à choisir pour chaque place */
+  pack?: EventPack;
+  /** calculé à la lecture (lib/events.ts) : la billetterie est-elle ouverte ? */
+  salesOpen: boolean;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -140,6 +166,14 @@ export function dateParts(iso: string) {
     timeZone: TZ,
   }).format(d);
   return { day, month, long: long.charAt(0).toUpperCase() + long.slice(1) };
+}
+
+/** « lundi 16 novembre à 10h » */
+export function salesOpenLabel(iso: string): string {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: TZ }).format(d);
+  const [h, m] = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: TZ }).format(d).split(":");
+  return `${day} à ${Number(h)}h${m === "00" ? "" : m}`;
 }
 
 export function conceptNames(slugs: ConceptSlug[]): string {
