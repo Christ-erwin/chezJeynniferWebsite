@@ -55,7 +55,7 @@ export class GamesService {
     };
   }
 
-  /** Écran public : jamais le rôle d'un joueur encore en vie. */
+  /** Écran public : jamais le rôle (ni le totem) d'un joueur encore en vie. */
   screen(id: string): ScreenGame {
     const g = this.get(id);
     const ended = g.status === 'ended';
@@ -77,6 +77,7 @@ export class GamesService {
         eliminatedAt: p.eliminatedAt,
         revivedAt: p.revivedAt,
         role: p.eliminatedAt || ended ? p.role : null,
+        totem: p.eliminatedAt || ended ? p.totem === true : undefined,
       })),
     };
   }
@@ -119,6 +120,7 @@ export class GamesService {
         photo: cleanPhoto(p.photo),
         role,
         feminine: p.feminine === true,
+        totem: p.totem === true,
       };
     });
     return this.store.mutate(() => {

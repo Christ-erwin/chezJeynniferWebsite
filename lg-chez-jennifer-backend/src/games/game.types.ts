@@ -13,6 +13,7 @@ export const ROLE_IDS = [
   'deux-soeurs',
   'enfant-sauvage',
   'chien-loup',
+  'voleur',
 ] as const;
 export type RoleId = (typeof ROLE_IDS)[number];
 
@@ -29,6 +30,8 @@ export type Player = {
   role: RoleId | null;
   /** accorde le nom du rôle au féminin (Villageoise, Chasseuse) */
   feminine?: boolean;
+  /** seconde carte : le Totem de protection (immunité, une fois par partie) */
+  totem?: boolean;
   eliminatedAt?: string;
   /** dernière résurrection annoncée (l'écran joue l'animation quand elle change) */
   revivedAt?: string;
@@ -61,5 +64,5 @@ export type GameState = Pick<Game, 'id' | 'rev' | 'status' | 'winner' | 'updated
 
 /** Vue publique (écran géant) : le rôle n'est transmis que pour les joueurs éliminés, ou en fin de partie. */
 export type ScreenGame = Pick<Game, 'id' | 'title' | 'status' | 'winner' | 'rev' | 'updatedAt' | 'chiefId' | 'chiefAt' | 'introAt'> & {
-  players: (Omit<Player, 'role'> & { role: RoleId | null })[];
+  players: (Omit<Player, 'role' | 'totem'> & { role: RoleId | null; totem?: boolean })[];
 };

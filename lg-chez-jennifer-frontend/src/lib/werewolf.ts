@@ -19,7 +19,8 @@ export type RoleId =
   | "petite-fille"
   | "deux-soeurs"
   | "enfant-sauvage"
-  | "chien-loup";
+  | "chien-loup"
+  | "voleur";
 
 export type WerewolfRole = {
   id: RoleId;
@@ -46,7 +47,31 @@ export const ROLES: WerewolfRole[] = [
   { id: "deux-soeurs", name: "Deux Sœurs", camp: "village", text: "Elles se reconnaissent et complotent ensemble." },
   { id: "enfant-sauvage", name: "Enfant Sauvage", camp: "ambigu", unique: true, text: "S'il perd son modèle, il rejoint la meute." },
   { id: "chien-loup", name: "Chien-Loup", camp: "ambigu", unique: true, text: "Au premier soir, il choisit : chien fidèle ou loup." },
+  { id: "voleur", name: "Voleur", feminine: "Voleuse", camp: "ambigu", unique: true, text: "Il échange sa carte avec celle d'un autre joueur." },
 ];
+
+/**
+ * Illustrations des cartes de nos soirées (public/images/cartes). Un rôle sans
+ * illustration (Deux Sœurs) garde la carte dessinée.
+ */
+export const ROLE_CARDS: Partial<Record<RoleId, string>> = {
+  "loup-garou": "/images/cartes/loup-garou.webp",
+  "loup-garou-infect": "/images/cartes/loup-garou-infect.webp",
+  "grand-mechant-loup": "/images/cartes/grand-mechant-loup.webp",
+  "loup-blanc": "/images/cartes/loup-blanc.webp",
+  villageois: "/images/cartes/villageois.webp",
+  voyante: "/images/cartes/voyante.webp",
+  sorciere: "/images/cartes/sorciere.webp",
+  chasseur: "/images/cartes/chasseur.webp",
+  cupidon: "/images/cartes/cupidon.webp",
+  "petite-fille": "/images/cartes/petite-fille.webp",
+  "enfant-sauvage": "/images/cartes/enfant-sauvage.webp",
+  "chien-loup": "/images/cartes/chien-loup.webp",
+  voleur: "/images/cartes/voleur.webp",
+};
+
+/** Seconde carte qu'un joueur peut recevoir en plus de son rôle. */
+export const TOTEM = { name: "Totem de protection", card: "/images/cartes/totem.webp", color: "#f2c86b" };
 
 export const ROLE_BY_ID = Object.fromEntries(ROLES.map((r) => [r.id, r])) as Record<RoleId, WerewolfRole>;
 
@@ -76,6 +101,8 @@ export type Player = {
   photo?: string;
   role: RoleId | null;
   feminine?: boolean;
+  /** seconde carte : le Totem de protection */
+  totem?: boolean;
   eliminatedAt?: string;
   revivedAt?: string;
 };
@@ -122,6 +149,8 @@ export function compositionWarnings(players: Player[]): string[] {
   const sisters = count("deux-soeurs");
   if (sisters && sisters !== 2) w.push(`Les Deux Sœurs vont par deux (actuellement ${sisters}).`);
   for (const r of ROLES) if (r.unique && count(r.id) > 1) w.push(`${r.name} est attribué ${count(r.id)} fois.`);
+  const totems = players.filter((p) => p.totem).length;
+  if (totems > 1) w.push(`Le ${TOTEM.name} est attribué ${totems} fois.`);
   return w;
 }
 

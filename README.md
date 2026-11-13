@@ -45,6 +45,7 @@ npm run dev
 |---|---|
 | `npm run dev` | lance backend + frontend en parallèle |
 | `npm run dev:back` / `npm run dev:front` | lance un seul des deux |
+| `npm run soiree` | **mode soirée** : détecte l'adresse de l'ordinateur et ouvre le site + l'API au Wi-Fi, pour piloter la régie Loup-Garou depuis un téléphone pendant que l'ordinateur (recopié sur la télé) affiche l'écran public. Arrête d'abord `npm run dev`. `-- --dry` affiche la config sans rien lancer |
 | `npm run build` | build des deux projets |
 | `npm run install:all` | `npm install` dans les deux projets |
 # chezJeynniferWebsite

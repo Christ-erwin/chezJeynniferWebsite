@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { CAMPS, ROLE_BY_ID, roleName, type Camp, type RoleId } from "@/lib/werewolf";
+import Image from "next/image";
+import { CAMPS, ROLE_BY_ID, ROLE_CARDS, TOTEM, roleName, type Camp, type RoleId } from "@/lib/werewolf";
 
 /* ---------------------------------- emblèmes ---------------------------------- */
 const WOLF = "M14 10 24 24q8-3 16 0l10-14-1 20q-1 10-8 17l-5 7q-4 4-8 0l-5-7q-7-7-8-17Z";
@@ -92,7 +93,24 @@ const EMBLEMS: Record<RoleId, ReactNode> = {
       <ellipse cx="46" cy="27" rx="4.5" ry="6" />
     </>
   ),
+  voleur: (
+    <>
+      <rect x="10" y="14" width="22" height="32" rx="3" transform="rotate(-12 21 30)" />
+      <rect x="32" y="18" width="22" height="32" rx="3" transform="rotate(12 43 34)" />
+      <path d="M20 6q12-6 24 0M40 2l4 4-5 3M44 58q-12 6-24 0M24 62l-4-4 5-3" />
+    </>
+  ),
 };
+
+/** Emblème du Totem de protection (bouclier). */
+export function TotemEmblem({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M32 6 52 13v17c0 13-9 22-20 28C21 52 12 43 12 30V13Z" />
+      <path d="M32 18v24M22 28h20" />
+    </svg>
+  );
+}
 
 export function RoleEmblem({ role, className = "" }: { role: RoleId; className?: string }) {
   return (
@@ -144,6 +162,8 @@ const THEME: Record<Camp, { card: string; ink: string; muted: string; frame: str
 export function RoleCardFront({ role, feminine, className = "" }: { role: RoleId; feminine?: boolean; className?: string }) {
   const r = ROLE_BY_ID[role];
   const t = THEME[r.camp];
+  const art = ROLE_CARDS[role];
+  if (art) return <ArtCard src={art} alt={`Carte ${r.name}`} className={className} />;
   return (
     <div className={`@container relative aspect-[5/7] overflow-hidden rounded-[7%/5%] border shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ${t.card} ${t.ink} ${className}`}>
       <div className={`absolute inset-[4.5%] rounded-[5%/3.6%] border ${t.frame}`} />
@@ -156,6 +176,34 @@ export function RoleCardFront({ role, feminine, className = "" }: { role: RoleId
         <p className={`text-[4.8cqw] leading-relaxed ${t.muted}`}>{r.text}</p>
       </div>
     </div>
+  );
+}
+
+/** Carte illustrée (les cartes imprimées de nos soirées), au format 2:3. */
+function ArtCard({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
+  return (
+    <div className={`relative aspect-[2/3] overflow-hidden rounded-[4.5%/3%] bg-[#140506] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] ${className}`}>
+      <Image src={src} alt={alt} fill sizes="(orientation: landscape) 45vh, 60vw" draggable={false} className="object-cover" />
+    </div>
+  );
+}
+
+/** Seconde carte d'un joueur : le Totem de protection. */
+export function TotemCard({ className = "" }: { className?: string }) {
+  return <ArtCard src={TOTEM.card} alt={`Carte ${TOTEM.name}`} className={className} />;
+}
+
+/** Pastille « Totem » (vignettes, listes). */
+export function TotemChip({ className = "" }: { className?: string }) {
+  return (
+    <span
+      title={TOTEM.name}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
+      style={{ borderColor: `${TOTEM.color}66`, color: TOTEM.color, background: `${TOTEM.color}14` }}
+    >
+      <TotemEmblem className="h-3.5 w-3.5" />
+      Totem
+    </span>
   );
 }
 

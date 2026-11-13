@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { adminApi, mediaUrl } from "@/lib/admin-api";
-import { CAMPS, ROLES, ROLE_BY_ID, compositionWarnings, type Camp, type Game, type Player, type RoleId } from "@/lib/werewolf";
+import { CAMPS, ROLES, ROLE_BY_ID, TOTEM, compositionWarnings, type Camp, type Game, type Player, type RoleId } from "@/lib/werewolf";
 import { useAdminSession } from "@/components/admin/AdminShell";
-import { RoleChip, RoleEmblem } from "@/components/werewolf/RoleCard";
+import { RoleChip, RoleEmblem, TotemEmblem } from "@/components/werewolf/RoleCard";
 import { Badge, Button, Card, ErrorNote, ImageIcon, Input, PlayIcon, PlusIcon, Select, ShuffleIcon, Skeleton, TrashIcon, XIcon } from "@/components/admin/ui";
 
 type Draft = { title: string; eventId?: string; players: Player[] };
@@ -310,6 +310,11 @@ export default function GameSetupPage() {
                 </li>
               ))}
             </ul>
+            <p className="mt-3 flex items-center gap-2.5 border-t border-line px-1 pt-3 text-sm" style={{ color: draft.players.some((p) => p.totem) ? TOTEM.color : undefined }}>
+              <TotemEmblem className="h-6 w-6 shrink-0" />
+              <span className="flex-1 text-paper-muted">{TOTEM.name} <span className="text-paper-dim">(case sous chaque joueur)</span></span>
+              <span className="w-6 text-center font-semibold tabular-nums text-paper">{draft.players.filter((p) => p.totem).length}</span>
+            </p>
             <Button className="mt-4 w-full" onClick={shuffleRoles} disabled={assigned < 2}>
               <ShuffleIcon /> Distribuer les rôles au hasard
             </Button>
@@ -429,6 +434,11 @@ function PlayerCard({
             Elle
           </label>
         </div>
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs" style={{ color: p.totem ? TOTEM.color : undefined }} title={`Seconde carte : le ${TOTEM.name}`}>
+          <input type="checkbox" checked={!!p.totem} onChange={(e) => onChange({ totem: e.target.checked })} className="accent-[#f2c86b]" />
+          <TotemEmblem className="h-4 w-4" />
+          <span className={p.totem ? "" : "text-paper-muted"}>{TOTEM.name}</span>
+        </label>
       </div>
     </li>
   );

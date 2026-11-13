@@ -8,7 +8,7 @@ import { adminApi, mediaUrl } from "@/lib/admin-api";
 import { WINNERS, roleName, type Game, type GameState, type Player, type WinnerId } from "@/lib/werewolf";
 import { useAdminSession } from "@/components/admin/AdminShell";
 import { Crown } from "@/components/werewolf/Crown";
-import { RoleChip } from "@/components/werewolf/RoleCard";
+import { RoleChip, TotemChip } from "@/components/werewolf/RoleCard";
 import { Badge, Button, Card, ErrorNote, ExternalIcon, FlagIcon, Overlay, PlayIcon, RefreshIcon, Skeleton, UndoIcon } from "@/components/admin/ui";
 
 /**
@@ -151,7 +151,7 @@ export default function GameControlPage() {
           <div className="flex-1">
             <p className="font-semibold text-paper">La partie n&apos;a pas commencé</p>
             <p className="mt-1 text-sm text-paper-muted">
-              L&apos;écran public affiche la salle d&apos;attente. « Lancer » joue la cinématique d&apos;introduction (environ 1 min 40), puis distribue les cartes des joueurs.
+              L&apos;écran public affiche la salle d&apos;attente. « Lancer » joue la cinématique d&apos;introduction (environ 1 min 45), puis distribue les cartes des joueurs.
             </p>
           </div>
           <Button variant="primary" onClick={() => run(() => adminApi.startGame(id), "Cinématique lancée sur l'écran public.")} disabled={busy}>
@@ -199,6 +199,7 @@ export default function GameControlPage() {
                     <div className="space-y-1 p-2">
                       <p className="truncate text-sm font-semibold text-paper">{p.name || `Joueur ${i + 1}`}</p>
                       {p.role ? <RoleChip role={p.role} feminine={p.feminine} /> : <span className="text-xs text-rose-300">Sans rôle</span>}
+                      {p.totem && <TotemChip className="ml-1" />}
                     </div>
                   </button>
                 </li>
@@ -256,6 +257,7 @@ export default function GameControlPage() {
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-paper-muted">
                   {target.role ? <RoleChip role={target.role} feminine={target.feminine} /> : <span className="text-rose-300">Sans rôle</span>}
+                  {target.totem && <TotemChip />}
                   {out ? `Éliminé${e}` : isChief ? "Chef du village" : "En vie"}
                 </p>
               </div>

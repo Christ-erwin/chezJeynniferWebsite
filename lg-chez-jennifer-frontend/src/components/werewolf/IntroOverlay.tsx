@@ -127,9 +127,14 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
       tl.fromTo(".io-eye", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, stagger: { each: 0.45, from: "random" } }, t + 0.8);
       tl.call(() => sfx.heartbeat(0.2), [], t + 1.4);
       tl.call(() => sfx.heartbeat(0.4), [], t + 2.6);
-      narrate(".sc-3");
+      // puis la bête sort de l'ombre (les yeux s'effacent derrière elle)
+      tl.fromTo(".io-presence", { autoAlpha: 0, scale: reduced ? 1 : 1.12 }, { autoAlpha: 1, scale: 1, duration: 4.5, ease: "power2.out" }, t + 2.4);
+      tl.to(".io-eye", { autoAlpha: 0, duration: 1.6 }, t + 3.6);
+      tl.call(() => sfx.impact(0.4), [], t + 2.6);
+      narrate(".sc-3", 2.2);
 
       /* 4. La lune se lève, un loup hurle */
+      tl.to(".io-presence", { autoAlpha: 0, duration: 2 }, t - 1);
       tl.fromTo(".io-moon", { yPercent: 22, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 0.45, duration: 6, ease: "power2.out" }, t - 0.6);
       tl.call(() => sfx.howl(), [], t + 2.8);
       narrate(".sc-4");
@@ -193,8 +198,11 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
       tl.to(".io-red", { autoAlpha: 0.45, duration: 2 }, t);
       narrate(".sc-10", 0.6);
 
-      /* 11. L'ennemi qui sourit : le cœur s'emballe */
-      const s11 = narrate(".sc-11", 0.6);
+      /* 11. L'ennemi qui sourit : une silhouette approche, le cœur s'emballe */
+      tl.to(".io-moon", { autoAlpha: 0, duration: 1.5 }, t - 0.6);
+      tl.fromTo(".io-silhouette", { autoAlpha: 0 }, { autoAlpha: 1, duration: 3, ease: "power1.inOut" }, t - 0.6);
+      if (!reduced) tl.fromTo(".io-silhouette", { scale: 1, transformOrigin: "62% 22%" }, { scale: 1.2, duration: 11, ease: "none" }, t - 0.6); // zoom sur le visage
+      const s11 = narrate(".sc-11", 1.2);
       [0.2, 0.45, 0.7, 1].forEach((lvl, i) => tl.call(() => sfx.heartbeat(lvl), [], s11 + 1.5 + i * 1.05));
 
       /* 12. Que le massacre commence ! */
@@ -205,6 +213,7 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
       tl.fromTo(".io-flash", { autoAlpha: 0 }, { autoAlpha: 0.75, duration: 0.08 }, t + 0.45);
       tl.to(".io-flash", { autoAlpha: 0, duration: 1.4, ease: "power2.out" }, t + 0.55);
       tl.to(".io-red", { autoAlpha: 0.9, duration: 0.3 }, t + 0.45);
+      tl.to(".io-silhouette", { autoAlpha: 0, duration: 0.25 }, t + 0.45); // coupée par l'éclair
       if (!reduced) tl.to(".io-shake", { keyframes: { x: [-16, 14, -10, 8, -5, 2, 0], y: [6, -8, 5, -4, 2, 0, 0] }, duration: 0.7, ease: "none" }, t + 0.45);
       tl.call(() => stopDrone.current(), [], t + 4.6);
       tl.to(".io-content", { autoAlpha: 0, duration: 1.2 }, t + 5);
@@ -227,6 +236,8 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
   }, [finish]);
 
   const scene = "absolute inset-0 flex flex-col items-center justify-center px-[6vw] invisible opacity-0";
+  /* scènes illustrées : le texte descend en sous-titre pour laisser voir l'image */
+  const subtitle = scene.replace("justify-center", "justify-end pb-[13vh]");
 
   return (
     <div ref={root} role="dialog" aria-modal="true" aria-label={`Bienvenue à ${VILLAGE}`} className="fixed inset-0 z-[60] overflow-hidden bg-[#070404] text-paper">
@@ -244,6 +255,17 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
         <Image src="/images/lg-scene.jpg" alt="" fill priority sizes="100vw" className="object-cover object-[55%_40%] saturate-[1.15]" />
         <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,transparent_35%,#070404_85%)]" />
       </div>
+      {/* illustrations plein écran (scènes 3 et 11), assombries en bas pour le sous-titre */}
+      {[
+        { cls: "io-presence", src: "/images/intro/presence.webp", pos: "object-[50%_45%]" },
+        { cls: "io-silhouette", src: "/images/intro/silhouette.webp", pos: "object-[62%_20%]" },
+      ].map((l) => (
+        <div key={l.cls} className={`${l.cls} pointer-events-none invisible absolute inset-0 opacity-0`} aria-hidden>
+          <Image src={l.src} alt="" fill sizes="100vw" className={`object-cover ${l.pos}`} />
+          <div className="absolute inset-x-0 bottom-0 h-[55%] bg-linear-to-t from-[#070404] via-[#070404]/70 to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(130%_100%_at_50%_45%,transparent_45%,#070404_100%)]" />
+        </div>
+      ))}
       {EYES.map((e, i) => (
         <span key={i} className="io-eye pointer-events-none invisible absolute flex opacity-0" style={{ left: `${e.x}%`, top: `${e.y}%`, gap: `${1.6 * e.s}vh` }} aria-hidden>
           {[0, 1].map((k) => (
@@ -278,7 +300,7 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
               <Words text="Il était une fois, un village autrefois paisible, où les habitants vivaient en parfaite harmonie." />
             </p>
           </section>
-          <section className={`sc-3 ${scene}`}>
+          <section className={`sc-3 ${subtitle}`}>
             <p className={NARRATION}>
               <Words text="Jusqu’au jour où d’étranges *créatures* firent leur apparition…" />
             </p>
@@ -369,7 +391,7 @@ export function IntroOverlay({ players, onDone, canSkip }: { players: Player[]; 
               </span>
             </p>
           </section>
-          <section className={`sc-11 ${scene}`}>
+          <section className={`sc-11 ${subtitle}`}>
             <p className={NARRATION}>
               <Words text="Car votre plus grand ennemi pourrait bien être celui qui vous *sourit* depuis le début…" />
             </p>

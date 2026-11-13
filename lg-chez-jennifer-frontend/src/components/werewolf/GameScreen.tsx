@@ -11,7 +11,7 @@ import { RevealOverlay } from "./RevealOverlay";
 import { Crown } from "./Crown";
 import { EventOverlay } from "./EventOverlay";
 import { IntroOverlay } from "./IntroOverlay";
-import { RoleChip } from "./RoleCard";
+import { RoleChip, TotemEmblem } from "./RoleCard";
 import { sfx } from "./sfx";
 import { ArrowLeftIcon, ExpandIcon, FlagIcon, MuteIcon, PlayIcon, RefreshIcon, SoundIcon, UndoIcon } from "@/components/admin/ui";
 
@@ -42,6 +42,7 @@ function fit(n: number, W: number, H: number) {
     options.push({ cols, w: Math.floor(w), empty: rows * cols - n });
   }
   const max = Math.max(...options.map((o) => o.w));
+  if (max <= 0) return { cols: Math.ceil(Math.sqrt(n)), w: SMALL - 1, empty: 0 }; // conteneur pas encore mesuré
   return options.filter((o) => o.w >= max * 0.9).sort((a, b) => a.empty - b.empty || b.w - a.w)[0];
 }
 
@@ -178,7 +179,10 @@ export function GameScreen({ id }: { id: string }) {
   useEffect(() => {
     const el = gridRef.current;
     if (!el || !count) return;
-    const ro = new ResizeObserver(([entry]) => setLayout(fit(count, entry.contentRect.width, entry.contentRect.height)));
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setLayout(fit(count, width, height));
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [count, showGrid]);
@@ -730,6 +734,11 @@ function Tile({
         {!small && (
           <div className="mt-2 flex h-6 justify-center">
             {p.role && (out || ended) && <RoleChip role={p.role} feminine={p.feminine} className={ended && !out ? "anim-card-in" : ""} />}
+            {p.totem && (out || ended) && (
+              <span title="Totem de protection" className="ml-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#f2c86b]/50 bg-[#f2c86b]/10 text-[#f2c86b]">
+                <TotemEmblem className="h-3.5 w-3.5" />
+              </span>
+            )}
           </div>
         )}
       </button>

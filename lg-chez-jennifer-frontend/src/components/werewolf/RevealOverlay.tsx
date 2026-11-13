@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { mediaUrl } from "@/lib/admin-api";
-import { CAMPS, ROLE_BY_ID, roleName, type Player } from "@/lib/werewolf";
+import { CAMPS, ROLE_BY_ID, TOTEM, roleName, type Player } from "@/lib/werewolf";
 import { NightAmbience } from "./NightAmbience";
-import { RoleCardBack, RoleCardFront } from "./RoleCard";
+import { RoleCardBack, RoleCardFront, TotemCard } from "./RoleCard";
 import { sfx } from "./sfx";
 
 gsap.registerPlugin(useGSAP);
@@ -17,7 +17,8 @@ const COUNT = 5;
  * Révélation d'un joueur éliminé, en 3 temps (comme sur l'affiche) :
  * 1. sa photo s'envole de la grille et s'affiche en grand,
  * 2. compte à rebours de 5 secondes,
- * 3. sa carte se retourne et dévoile son rôle.
+ * 3. sa carte se retourne et dévoile son rôle ; s'il avait aussi le Totem de
+ *    protection, une seconde carte sort de derrière et se retourne à son tour.
  * En mode « show », on revoit directement la carte d'un joueur déjà éliminé.
  */
 export function RevealOverlay({
@@ -51,9 +52,15 @@ export function RevealOverlay({
   const wolf = role?.camp === "loups";
   const color = role ? CAMPS[role.camp].color : "#ffffff";
   const closing = useRef(false);
+  // le totem n'est connu qu'une fois l'élimination enregistrée (après l'ouverture) : on le lit au moment voulu
+  const hasTotem = useRef(!!player.totem);
+  useEffect(() => {
+    hasTotem.current = !!player.totem;
+  });
+  const [totemOut, setTotemOut] = useState(mode === "show" && !!player.totem);
 
   useGSAP(
-    () => {
+    (_, contextSafe) => {
       const photo = root.current!.querySelector<HTMLElement>(".ro-photo")!;
       const tl = gsap.timeline();
       tl.fromTo(".ro-bg", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, ease: "power2.out" }, 0);
@@ -69,6 +76,8 @@ export function RevealOverlay({
 
       if (mode === "show") {
         gsap.set(".ro-flip", { rotateY: 180 });
+        if (player.totem) gsap.set(".ro-totem", { autoAlpha: 1, xPercent: 80, rotate: 6, y: "3%" });
+        if (player.totem) gsap.set(".ro-totem-flip", { rotateY: 180 });
         tl.from(".ro-card", { autoAlpha: 0, x: 60, duration: 0.8, ease: "expo.out" }, 0.3).fromTo(".ro-role", { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.6 }, 0.6);
         return;
       }
@@ -100,7 +109,18 @@ export function RevealOverlay({
       tl.fromTo(".ro-flash", { autoAlpha: 0.75 }, { autoAlpha: 0, duration: 1.4, ease: "power2.out", immediateRender: false }, flipAt + 1.45);
       tl.fromTo(".ro-role", { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "expo.out" }, flipAt + 1.6);
       tl.to(photo, { filter: "grayscale(1) brightness(0.55)", duration: 1.2 }, flipAt + 1.6);
-      tl.call(() => setPhase("done"), [], flipAt + 2.2);
+      /** Seconde carte : le Totem sort de derrière la carte du rôle, puis se retourne. */
+      const revealTotem = contextSafe!(() => {
+        setTotemOut(true);
+        gsap
+          .timeline({ onComplete: () => setPhase("done") })
+          .fromTo(".ro-totem", { autoAlpha: 1, xPercent: 0, rotate: 0, y: 0 }, { xPercent: 80, rotate: 6, y: "3%", duration: 0.9, ease: "expo.out" }, 0.2)
+          .to(".ro-totem-flip", { rotateY: 180, duration: 0.9, ease: "power3.inOut" }, 1)
+          .call(() => sfx.coronation(), [], 1.4)
+          .fromTo(".ro-totem-glow", { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1.15, duration: 0.8, ease: "expo.out" }, 1.4)
+          .to(".ro-totem-glow", { autoAlpha: 0.35, duration: 1.2 }, 2.2);
+      });
+      tl.call(() => (hasTotem.current ? revealTotem() : setPhase("done")), [], flipAt + 2.2);
     },
     { scope: root },
   );
@@ -178,7 +198,19 @@ export function RevealOverlay({
 
         {/* compte à rebours puis carte + rôle */}
         <div className="flex flex-col items-center">
-          <div className="relative flex aspect-[5/7] h-[30vh] items-center justify-center landscape:h-[56vh]">
+          <div className={`relative flex aspect-[2/3] h-[30vh] items-center justify-center transition-[margin] duration-700 ease-(--ease-soft) landscape:h-[60vh] ${totemOut ? "mr-[16vh] landscape:mr-[32vh]" : ""}`}>
+            {/* Totem de protection : caché derrière la carte du rôle jusqu'à sa révélation */}
+            <div className="ro-totem invisible absolute inset-0 opacity-0 [perspective:1600px]" aria-hidden={!totemOut}>
+              <span className="ro-totem-glow pointer-events-none absolute -inset-[12%] rounded-full opacity-0" style={{ background: `radial-gradient(circle, ${TOTEM.color}55, transparent 65%)` }} />
+              <div className="ro-totem-flip relative h-full w-full [transform-style:preserve-3d]">
+                <div className="absolute inset-0 [backface-visibility:hidden]">
+                  <RoleCardBack className="h-full w-full" />
+                </div>
+                <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                  {totemOut && <TotemCard className="h-full w-full" />}
+                </div>
+              </div>
+            </div>
             {mode === "eliminate" && (
               <div className="ro-count absolute inset-0 flex items-center justify-center" aria-live="assertive">
                 <span className="ro-pulse absolute aspect-square w-[78%] rounded-full border-2 border-[#ff4552]" />
@@ -211,6 +243,11 @@ export function RevealOverlay({
                 <p className="t-label mt-[1.4vh] text-[1.8vh]!" style={{ color }}>
                   {CAMPS[role.camp].label}
                 </p>
+                {totemOut && (
+                  <p className="anim-card-in t-display mt-[1.6vh] text-[3vh]" style={{ color: TOTEM.color, textShadow: `0 0 30px ${TOTEM.color}88` }}>
+                    … et {player.feminine ? "elle" : "il"} détenait le {TOTEM.name}
+                  </p>
+                )}
               </>
             )}
           </div>
