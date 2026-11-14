@@ -24,8 +24,8 @@ Coût Railway : offre Hobby, environ 5 $/mois (un essai gratuit est offert à l'
    ADMIN_PASSWORD=<mot de passe fort, nouveau>
    STAFF_PASSWORD=<mot de passe de l'équipe d'accueil>
    ADMIN_SECRET=<résultat de : openssl rand -hex 32>
-   FRONTEND_ORIGIN=https://chez-jeynnifer-website-x954.vercel.app
-   FRONTEND_URL=https://chez-jeynnifer-website-x954.vercel.app
+   FRONTEND_ORIGIN=https://www.chezjeynnifer.online,https://chezjeynnifer.online,https://chez-jeynnifer-website-x954.vercel.app
+   FRONTEND_URL=https://www.chezjeynnifer.online
    GENIUSPAY_PUBLIC_KEY=pk_sandbox_...   (puis pk_live_...)
    GENIUSPAY_SECRET_KEY=sk_sandbox_...   (puis sk_live_...)
    GENIUSPAY_WEBHOOK_SECRET=whsec_...

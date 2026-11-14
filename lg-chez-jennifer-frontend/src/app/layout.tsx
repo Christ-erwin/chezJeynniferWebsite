@@ -41,7 +41,7 @@ const description =
   "Les Soirées chez Jeynnifer : Game Night, Soirée Loup-Garou, CinéLune et Beach Party, à Abidjan et à la plage. Des soirées à taille humaine pour jouer, rire, regarder un film et vraiment se rencontrer. Réserve ton pass en ligne, paiement Wave ou Orange Money.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chez-jeynnifer.example"),
+  metadataBase: new URL("https://www.chezjeynnifer.online"),
   title: {
     default: "Les Soirées chez Jeynnifer — Plus que des soirées, des expériences",
     template: "%s · Les Soirées chez Jeynnifer",
