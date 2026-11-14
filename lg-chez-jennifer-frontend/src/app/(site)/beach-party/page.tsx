@@ -73,7 +73,8 @@ const FAQ = [
     a: "On part ensemble en car depuis Abidjan le samedi à 10h ; le point de rendez-vous exact est envoyé par WhatsApp aux participants. Le dimanche, départ du site vers 10h, puis retour en car et dépose à Abidjan.",
   },
   { q: "Où dort-on ?", a: "Sur place : des chambres et espaces de couchage adaptés sont prévus pour la nuit, et un espace de repos reste accessible pendant toute la soirée." },
-  { q: "Je peux venir seul·e ?", a: "Oui ! Les équipes sont créées dès le départ en car, et elles sont mélangées exprès. Tu arrives seul·e, tu repars avec une équipe." },
+  { q: "Je peux venir seul·e ?", a: "Oui ! À ta réservation, tu es tiré·e au sort dans l'une des 4 équipes (rouge, bleue, verte, jaune) de 4 filles et 4 garçons. Tu arrives seul·e, tu repars avec une équipe." },
+  { q: "Comment sont faites les équipes ?", a: "32 places : 16 filles et 16 garçons. Dès que ton paiement est confirmé, le site te place au hasard dans une équipe qui a encore de la place. Ta couleur s'affiche sur ton billet et dans l'e-mail de confirmation." },
   { q: "Peut-on se baigner ?", a: "En journée, oui, en suivant les consignes de l'équipe sur place. Les baignades de nuit sont interdites sans encadrement." },
   {
     q: "Est-ce que je serai filmé·e ?",

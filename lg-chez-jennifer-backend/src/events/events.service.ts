@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { JsonCollection } from '../common/json-collection.js';
 import { dataPath } from '../common/data-path.js';
-import { CONCEPTS, type ConceptSlug, type EventPack, type EventRecord, type EventStatus, type PassTier } from './event.types.js';
+import { CONCEPTS, type ConceptSlug, type EventPack, type EventRecord, type EventStatus, type GenderQuota, type PassTier, type TeamDef } from './event.types.js';
 import { seedEvents } from './events.seed.js';
 
 const STATUSES: EventStatus[] = ['draft', 'published', 'cancelled'];
@@ -53,6 +53,29 @@ function parsePack(raw: unknown): EventPack | undefined {
   return { label: str(p.label, 'Pack — nom', { max: 60 }), styles, sizes };
 }
 
+function parseGenders(raw: unknown, capacity: number): GenderQuota | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const g = raw as Record<string, unknown>;
+  const quota = { fille: int(g.fille, 'Places filles', 0, 5000), garcon: int(g.garcon, 'Places garçons', 0, 5000) };
+  if (quota.fille + quota.garcon !== capacity) {
+    throw new BadRequestException(`Places filles + garçons (${quota.fille + quota.garcon}) doit être égal à la capacité (${capacity}).`);
+  }
+  return quota;
+}
+
+function parseTeams(raw: unknown): TeamDef[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  if (raw.length < 2 || raw.length > 8) throw new BadRequestException('Équipes : entre 2 et 8.');
+  const names = new Set<string>();
+  return (raw as Record<string, unknown>[]).map((t, i) => {
+    const name = str(t?.name, `Équipe ${i + 1} — nom`, { max: 30 });
+    if (names.has(name.toLowerCase())) throw new BadRequestException(`Deux équipes s’appellent « ${name} ».`);
+    names.add(name.toLowerCase());
+    const color = typeof t?.color === 'string' && /^#[0-9a-f]{6}$/i.test(t.color) ? t.color.toLowerCase() : '#888888';
+    return { name, color };
+  });
+}
+
 /** Valide et normalise une édition envoyée par l'admin. */
 function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'createdAt' | 'updatedAt'> {
   const concepts = Array.isArray(raw.concepts) ? raw.concepts : [];
@@ -95,6 +118,8 @@ function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'cre
   const cover = str(raw.cover, 'Image', { max: 300 });
   if (!cover.startsWith('/') && !cover.startsWith('https://')) throw new BadRequestException('Image : chemin /images/… ou URL https.');
 
+  const capacity = int(raw.capacity, 'Capacité', 1, 5000);
+
   return {
     title: str(raw.title, 'Titre', { max: 80 }),
     subtitle: str(raw.subtitle, 'Sous-titre', { optional: true, max: 140 }),
@@ -109,9 +134,11 @@ function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'cre
       revealedAfterBooking: venueRaw.revealedAfterBooking !== false,
     },
     cover,
-    capacity: int(raw.capacity, 'Capacité', 1, 5000),
+    capacity,
     salesOpenAt: salesOpenAt ? new Date(salesOpenAt).toISOString() : undefined,
     pack: parsePack(raw.pack),
+    genders: parseGenders(raw.genders, capacity),
+    teams: parseTeams(raw.teams),
     status,
     note: str(raw.note, 'Note', { optional: true, max: 400 }) || undefined,
     tiers,
@@ -158,7 +185,7 @@ export class EventsService {
    * Mise à jour. `soldTierIds` : passes déjà vendus — on interdit de les
    * supprimer ou de changer leurs places (les billets émis y font référence).
    */
-  update(id: string, raw: Record<string, unknown>, soldTierIds: Set<string>, seatsTaken: number): Promise<EventRecord> {
+  update(id: string, raw: Record<string, unknown>, soldTierIds: Set<string>, seatsTaken: number, takenByGender?: GenderQuota): Promise<EventRecord> {
     const data = parseEvent(raw);
     return this.store.mutate(() => {
       const current = this.require(id);
@@ -169,6 +196,10 @@ export class EventsService {
         if (before && after.seats !== before.seats) throw new ConflictException(`Le pass « ${after.label} » a déjà été vendu : son nombre de places ne peut plus changer.`);
       }
       if (data.capacity < seatsTaken) throw new ConflictException(`Capacité trop basse : ${seatsTaken} places sont déjà réservées.`);
+      if (data.genders && takenByGender) {
+        if (data.genders.fille < takenByGender.fille) throw new ConflictException(`Places filles trop basses : ${takenByGender.fille} déjà réservées.`);
+        if (data.genders.garcon < takenByGender.garcon) throw new ConflictException(`Places garçons trop basses : ${takenByGender.garcon} déjà réservées.`);
+      }
       const next: EventRecord = { ...data, id, createdAt: current.createdAt, updatedAt: new Date().toISOString() };
       this.store.set(next);
       return next;

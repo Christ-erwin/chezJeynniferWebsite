@@ -6,6 +6,7 @@ import { adminApi, EVENT_STATUS } from "@/lib/admin-api";
 import { useLoad } from "@/components/admin/useLoad";
 import { EventForm } from "@/components/admin/EventForm";
 import { PacksSummary } from "@/components/admin/PacksSummary";
+import { TeamsSummary } from "@/components/admin/TeamsSummary";
 import { Badge, ErrorNote, ExternalIcon, PageHead, Skeleton } from "@/components/admin/ui";
 
 export default function EditEventPage() {
@@ -41,6 +42,7 @@ export default function EditEventPage() {
               </>
             }
           />
+          {data.teams?.length ? <TeamsSummary event={data} /> : null}
           {data.pack && <PacksSummary eventId={data.id} pack={data.pack} />}
           <EventForm key={data.updatedAt} event={data} />
         </>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { adminApi, METHOD_LABEL, ORDER_STATUS, type AdminOrder } from "@/lib/admin-api";
-import type { EventPack, PackChoice } from "@/lib/catalog";
+import { adminApi, METHOD_LABEL, ORDER_STATUS, type AdminOrder, type AdminTicket } from "@/lib/admin-api";
+import { GENDER_LABEL, isLightColor, type EventPack, type PackChoice, type TeamDef } from "@/lib/catalog";
 import { Badge, Button, CheckIcon, dateTime, ErrorNote, fcfa, Overlay, Select, XIcon } from "./ui";
 import { useLoad } from "./useLoad";
 
@@ -14,6 +14,23 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
   const phone = o.buyer.phone.replace(/\D/g, "");
   const event = useLoad(() => adminApi.event(o.eventId), o.eventId);
   const pack = event.data?.pack;
+  const teams = event.data?.teams;
+  const [mailing, setMailing] = useState(false);
+  const [mailNote, setMailNote] = useState<string | null>(null);
+
+  async function resend() {
+    setMailing(true);
+    setError(null);
+    setMailNote(null);
+    try {
+      onChanged(await adminApi.resendEmail(o.id));
+      setMailNote(`Billets envoyés à ${o.buyer.email}.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setMailing(false);
+    }
+  }
 
   async function act(kind: "paid" | "cancel") {
     const msg =
@@ -78,17 +95,7 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
           <Section title={`Billets · ${scanned}/${o.tickets.length} scanné${scanned > 1 ? "s" : ""}`}>
             <ul className="space-y-2">
               {o.tickets.map((t) => (
-                <li key={t.code} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2">
-                  <div>
-                    <p className="font-mono text-sm text-paper">{t.code}</p>
-                    <p className="text-xs text-paper-dim">{t.label}</p>
-                  </div>
-                  {t.usedAt ? (
-                    <span className="flex items-center gap-1 text-xs text-emerald-300"><CheckIcon className="h-4 w-4" /> {dateTime(t.usedAt)}</span>
-                  ) : (
-                    <span className="text-xs text-paper-dim">Pas encore entré</span>
-                  )}
-                </li>
+                <TicketRow key={`${t.code}-${o.updatedAt}`} order={o} ticket={t} teams={teams} onChanged={onChanged} onError={setError} />
               ))}
             </ul>
           </Section>
@@ -114,7 +121,16 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
             >
               Envoyer par WhatsApp
             </a>
-            <p className="mt-2 text-xs text-paper-dim">Le lien ouvre la page des billets (QR codes + adresse).</p>
+            {o.buyer.email && (
+              <Button size="sm" variant="ghost" className="ml-2" disabled={mailing} onClick={resend}>
+                {mailing ? "Envoi…" : o.emailedAt ? "Renvoyer par e-mail" : "Envoyer par e-mail"}
+              </Button>
+            )}
+            <p className="mt-2 text-xs text-paper-dim">
+              Le lien ouvre la page des billets (QR codes + adresse).
+              {o.emailedAt ? ` E-mail envoyé le ${dateTime(o.emailedAt)}.` : o.buyer.email ? " E-mail pas encore envoyé." : " Pas d'e-mail pour cette commande."}
+            </p>
+            {mailNote && <p className="mt-2 text-xs text-emerald-300">{mailNote}</p>}
           </Section>
         )}
 
@@ -181,6 +197,80 @@ function PacksEditor({ order: o, pack, onChanged }: { order: AdminOrder; pack: E
         </Button>
       )}
     </Section>
+  );
+}
+
+/** Un billet : participant, sexe, équipe (modifiable : échange entre amis…), entrée. */
+function TicketRow({
+  order: o,
+  ticket: t,
+  teams,
+  onChanged,
+  onError,
+}: {
+  order: AdminOrder;
+  ticket: AdminTicket;
+  teams?: TeamDef[];
+  onChanged: (o: AdminOrder) => void;
+  onError: (m: string | null) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [holder, setHolder] = useState(t.holder);
+
+  async function save(patch: { holder?: string; team?: string }) {
+    setBusy(true);
+    onError(null);
+    try {
+      onChanged(await adminApi.updateTicket(o.id, t.code, patch));
+    } catch (err) {
+      onError((err as Error).message);
+      setHolder(t.holder);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className="space-y-2 rounded-xl border border-line px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-sm text-paper">{t.code}</p>
+          <p className="text-xs text-paper-dim">
+            {t.label}
+            {t.gender && ` · ${GENDER_LABEL[t.gender]}`}
+            {t.pack && ` · ${t.pack.style} ${t.pack.size}`}
+          </p>
+        </div>
+        {t.usedAt ? (
+          <span className="flex shrink-0 items-center gap-1 text-xs text-emerald-300"><CheckIcon className="h-4 w-4" /> {dateTime(t.usedAt)}</span>
+        ) : (
+          <span className="shrink-0 text-xs text-paper-dim">Pas encore entré</span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={holder}
+          onChange={(e) => setHolder(e.target.value)}
+          onBlur={() => holder.trim() !== t.holder && holder.trim().length >= 2 && save({ holder: holder.trim() })}
+          disabled={busy}
+          aria-label={`Participant du billet ${t.code}`}
+          className="min-w-0 flex-1 rounded-lg border border-line-strong bg-night px-2.5 py-1.5 text-sm text-paper outline-none focus:border-peach"
+        />
+        {teams?.length ? (
+          <Select
+            aria-label={`Équipe du billet ${t.code}`}
+            value={t.team?.name ?? ""}
+            disabled={busy}
+            onChange={(e) => e.target.value && confirm(`Passer ${t.holder} dans l'équipe ${e.target.value} ?`) && save({ team: e.target.value })}
+            className="w-auto! py-1.5! text-sm!"
+            style={t.team ? { background: t.team.color, color: isLightColor(t.team.color) ? "#141213" : "#fff", borderColor: "transparent" } : undefined}
+          >
+            {!t.team && <option value="">Équipe…</option>}
+            {teams.map((x) => <option key={x.name} value={x.name}>Équipe {x.name}</option>)}
+          </Select>
+        ) : null}
+      </div>
+    </li>
   );
 }
 

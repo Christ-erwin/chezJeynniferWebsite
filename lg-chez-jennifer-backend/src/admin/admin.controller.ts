@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { AdminGuard, Roles } from '../auth/auth.guard.js';
 import { EventsService } from '../events/events.service.js';
+import type { EventRecord } from '../events/event.types.js';
 import { OrdersService, type CreateOrderInput } from '../orders/orders.service.js';
 
 /** Espace admin — toutes les routes exigent une session (admin par défaut). */
@@ -22,13 +23,21 @@ export class AdminController {
   @Get('events')
   @Roles('admin', 'staff')
   listEvents() {
-    return this.events.all().map((e) => ({ ...e, seatsTaken: this.orders.seatsTaken(e.id), soldTierIds: [...this.orders.soldTierIds(e.id)] }));
+    return this.events.all().map((e) => this.withStock(e));
   }
 
   @Get('events/:id')
   getEvent(@Param('id') id: string) {
-    const e = this.events.require(id);
-    return { ...e, seatsTaken: this.orders.seatsTaken(id), soldTierIds: [...this.orders.soldTierIds(id)] };
+    return this.withStock(this.events.require(id));
+  }
+
+  private withStock(e: EventRecord) {
+    return {
+      ...e,
+      seatsTaken: this.orders.seatsTaken(e.id),
+      seatsTakenByGender: this.orders.seatsTakenByGender(e.id),
+      soldTierIds: [...this.orders.soldTierIds(e.id)],
+    };
   }
 
   @Post('events')
@@ -38,7 +47,7 @@ export class AdminController {
 
   @Put('events/:id')
   updateEvent(@Param('id') id: string, @Body() body: Record<string, unknown>) {
-    return this.events.update(id, body ?? {}, this.orders.soldTierIds(id), this.orders.seatsTaken(id));
+    return this.events.update(id, body ?? {}, this.orders.soldTierIds(id), this.orders.seatsTaken(id), this.orders.seatsTakenByGender(id));
   }
 
   @Delete('events/:id')
@@ -79,6 +88,18 @@ export class AdminController {
   @Put('orders/:id/packs')
   setPacks(@Param('id') id: string, @Body() body: { packs?: unknown }) {
     return this.orders.setPacks(id, body?.packs);
+  }
+
+  /** Corrige un billet : nom du participant ou équipe. */
+  @Put('orders/:id/tickets/:code')
+  updateTicket(@Param('id') id: string, @Param('code') code: string, @Body() body: { holder?: unknown; team?: unknown }) {
+    return this.orders.updateTicket(id, code, body ?? {});
+  }
+
+  @Post('orders/:id/email')
+  @HttpCode(200)
+  resendEmail(@Param('id') id: string) {
+    return this.orders.resendEmail(id);
   }
 
   @Post('orders/:id/cancel')

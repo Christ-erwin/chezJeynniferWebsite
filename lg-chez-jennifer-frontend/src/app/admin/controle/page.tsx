@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { adminApi, type CheckinResult } from "@/lib/admin-api";
+import { isLightColor } from "@/lib/catalog";
 import { useLoad } from "@/components/admin/useLoad";
 import {
   Button,
@@ -196,7 +197,15 @@ export default function CheckinPage() {
               <p className="mt-1 text-paper">
                 {r.ticket ? (
                   <>
-                    {r.ticket.label} · <strong>{r.order?.buyer.name}</strong>
+                    {r.ticket.label} · <strong>{r.ticket.holder || r.order?.buyer.name}</strong>
+                    {r.ok && r.ticket.team && (
+                      <span
+                        className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold"
+                        style={{ background: r.ticket.team.color, color: isLightColor(r.ticket.team.color) ? "#141213" : "#fff" }}
+                      >
+                        Équipe {r.ticket.team.name}
+                      </span>
+                    )}
                     {r.ok && r.ticket.pack && (
                       <span className="mt-1 block text-sm text-peach">
                         Pack à remettre : <strong>{r.ticket.pack.style} · {r.ticket.pack.size}</strong>

@@ -7,6 +7,7 @@ import { EventsModule } from '../events/events.module.js';
 import { PublicEventsController } from '../events/events.controller.js';
 import { GeniusPayProvider } from '../payments/geniuspay.provider.js';
 import { MockProvider } from '../payments/mock.provider.js';
+import { MailService } from '../mail/mail.service.js';
 
 /**
  * Choix de l'agrégateur au démarrage :
@@ -33,7 +34,7 @@ function providerFactory(): PaymentProvider {
 @Module({
   imports: [EventsModule],
   controllers: [OrdersController, PaymentsController, PublicEventsController],
-  providers: [OrdersStore, OrdersService, { provide: PAYMENT_PROVIDER, useFactory: providerFactory }],
+  providers: [OrdersStore, OrdersService, MailService, { provide: PAYMENT_PROVIDER, useFactory: providerFactory }],
   exports: [OrdersService],
 })
 export class OrdersModule {}

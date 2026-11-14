@@ -1,3 +1,5 @@
+import type { Gender, TeamDef } from '../events/event.types.js';
+
 /** Wave / Orange Money passent par l'agrégateur ; "cash" = vente enregistrée à la main par l'admin. */
 export type PaymentMethod = 'wave' | 'orange_money' | 'cash';
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled' | 'expired';
@@ -7,7 +9,19 @@ export type OrderItem = { tierId: string; label: string; quantity: number; unitP
 /** Choix du pack offert pour une place (modèle + taille). */
 export type PackChoice = { style: string; size: string };
 
-export type Ticket = { code: string; label: string; holder: string; usedAt?: string; pack?: PackChoice };
+/** Une place : qui vient (nom) et son sexe (éditions avec quotas / équipes). */
+export type Participant = { name?: string; gender?: Gender };
+
+export type Ticket = {
+  code: string;
+  label: string;
+  holder: string;
+  usedAt?: string;
+  pack?: PackChoice;
+  gender?: Gender;
+  /** équipe tirée au sort au paiement */
+  team?: TeamDef;
+};
 
 export type Order = {
   id: string;
@@ -22,6 +36,8 @@ export type Order = {
   items: OrderItem[];
   /** un choix de pack par place, dans l'ordre des billets (éditions avec pack offert) */
   packs?: PackChoice[];
+  /** une entrée par place, dans l'ordre des billets */
+  participants?: Participant[];
   total: number;
   currency: 'XOF';
   createdAt: string;
@@ -30,12 +46,14 @@ export type Order = {
   provider: 'mock' | 'geniuspay' | 'manual';
   providerRef?: string;
   tickets: Ticket[];
+  /** billets envoyés par e-mail */
+  emailedAt?: string;
   /** trace des actions faites depuis l'admin */
   history?: { at: string; action: string }[];
 };
 
 /** Vue renvoyée au navigateur du client (sans champs internes). */
-export type PublicOrder = Omit<Order, 'provider' | 'providerRef' | 'updatedAt' | 'paidAt' | 'items' | 'history'> & {
+export type PublicOrder = Omit<Order, 'provider' | 'providerRef' | 'updatedAt' | 'paidAt' | 'items' | 'history' | 'emailedAt'> & {
   items: Omit<OrderItem, 'seats'>[];
   venue?: { name: string; city: string; address?: string };
 };

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { adminApi, METHOD_LABEL, type AdminEvent, type AdminOrder, type AdminPaymentMethod } from "@/lib/admin-api";
+import { GENDER_LABEL, type Gender } from "@/lib/catalog";
 import { Button, ErrorNote, fcfa, Field, Input, Overlay, Select } from "./ui";
 
 /**
@@ -25,6 +26,8 @@ export function ManualSale({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [method, setMethod] = useState<AdminPaymentMethod>("cash");
+  // éditions avec quotas filles / garçons ou équipes : une ligne par place
+  const [people, setPeople] = useState<{ name: string; gender: Gender | "" }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +35,15 @@ export function ManualSale({
   const total = event?.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.price, 0) ?? 0;
   const seats = event?.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.seats, 0) ?? 0;
   const left = event ? event.capacity - event.seatsTaken : 0;
+  const askPeople = !!event?.genders || !!event?.teams?.length;
+  const rows = Array.from({ length: askPeople ? seats : 0 }, (_, i) => people[i] ?? { name: "", gender: "" as const });
+  const setRow = (i: number, patch: Partial<{ name: string; gender: Gender }>) =>
+    setPeople((p) => {
+      const next = [...p];
+      next[i] = { ...(next[i] ?? { name: "", gender: "" }), ...patch };
+      return next;
+    });
+  const missingGender = !!event?.genders && rows.some((r) => !r.gender);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +56,9 @@ export function ManualSale({
         items: event.tiers.map((t) => ({ tierId: t.id, quantity: qty[t.id] ?? 0 })).filter((i) => i.quantity > 0),
         buyer: { name: name.trim(), phone, ...(email.trim() ? { email: email.trim() } : {}) },
         method,
+        ...(askPeople
+          ? { participants: rows.map((r, i) => ({ ...(r.name.trim() ? { name: r.name.trim() } : i === 0 ? { name: name.trim() } : {}), ...(r.gender ? { gender: r.gender } : {}) })) }
+          : {}),
       });
       onDone(order);
     } catch (err) {
@@ -90,6 +105,44 @@ export function ManualSale({
             </fieldset>
           )}
 
+          {askPeople && seats > 0 && (
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold text-paper">Participants</legend>
+              <ul className="space-y-2">
+                {rows.map((r, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-2">
+                    <span className="w-14 text-xs text-paper-dim">Place {i + 1}</span>
+                    <div className="min-w-40 flex-1">
+                      <Input aria-label={`Nom, place ${i + 1}`} value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} placeholder={i === 0 ? "Le client" : "Nom (facultatif)"} />
+                    </div>
+                    {event?.genders && (
+                      <div className="flex gap-1" role="radiogroup" aria-label={`Fille ou garçon, place ${i + 1}`}>
+                        {(["fille", "garcon"] as const).map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            role="radio"
+                            aria-checked={r.gender === g}
+                            onClick={() => setRow(i, { gender: g })}
+                            className={`rounded-full border px-3 py-1.5 text-sm ${r.gender === g ? "border-peach bg-peach/10 text-paper" : "border-line-strong text-paper-muted"}`}
+                          >
+                            {GENDER_LABEL[g]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {event?.genders && event.seatsTakenByGender && (
+                <p className="mt-2 text-xs text-paper-dim">
+                  Restant : {Math.max(event.genders.fille - event.seatsTakenByGender.fille, 0)} filles · {Math.max(event.genders.garcon - event.seatsTakenByGender.garcon, 0)} garçons.
+                  {event.teams?.length ? " L'équipe est tirée au sort à l'enregistrement." : ""}
+                </p>
+              )}
+            </fieldset>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nom du client">{(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />}</Field>
             <Field label="Téléphone">{(id) => <Input id={id} type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07 07 07 07 07" />}</Field>
@@ -114,11 +167,11 @@ export function ManualSale({
             <p className="text-paper-muted">
               {seats} place{seats > 1 ? "s" : ""} · <strong className="text-lg text-peach">{fcfa(total)}</strong>
             </p>
-            <Button type="submit" variant="primary" disabled={busy || seats === 0}>
+            <Button type="submit" variant="primary" disabled={busy || seats === 0 || missingGender} title={missingGender ? "Indique fille ou garçon pour chaque place" : undefined}>
               {busy ? "Enregistrement…" : "Enregistrer la vente"}
             </Button>
           </div>
-          <p className="text-xs text-paper-dim">La commande est enregistrée comme payée et les billets sont émis immédiatement.</p>
+          <p className="text-xs text-paper-dim">La commande est enregistrée comme payée et les billets sont émis immédiatement{email.trim() ? " puis envoyés par e-mail" : ""}.</p>
         </form>
       )}
     </Overlay>

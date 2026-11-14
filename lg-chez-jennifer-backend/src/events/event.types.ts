@@ -17,6 +17,15 @@ export type PassTier = {
 /** Pack offert à chaque participant : modèle et taille choisis à la réservation, pour chaque place. */
 export type EventPack = { label: string; styles: string[]; sizes: string[] };
 
+export const GENDERS = ['fille', 'garcon'] as const;
+export type Gender = (typeof GENDERS)[number];
+
+/** Places réservées à chaque sexe (la somme = capacité). */
+export type GenderQuota = Record<Gender, number>;
+
+/** Équipe tirée au sort au paiement (ex. Beach Party : Rouge, Bleu, Vert, Jaune). */
+export type TeamDef = { name: string; color: string };
+
 export type EventRecord = {
   id: string;
   title: string;
@@ -32,6 +41,10 @@ export type EventRecord = {
   /** ouverture de la billetterie en ligne (ISO) : avant, l'édition est visible mais pas encore en vente */
   salesOpenAt?: string;
   pack?: EventPack;
+  /** places par sexe : le sexe de chaque participant est demandé à la réservation */
+  genders?: GenderQuota;
+  /** équipes : chaque billet payé est placé au hasard dans une équipe, à parts égales par sexe */
+  teams?: TeamDef[];
   status: EventStatus;
   note?: string;
   tiers: PassTier[];
@@ -43,4 +56,6 @@ export type EventRecord = {
 export type PublicEvent = Omit<EventRecord, 'status' | 'createdAt' | 'updatedAt' | 'venue'> & {
   venue: { name: string; city: string; revealedAfterBooking: boolean };
   remaining: number;
+  /** places restantes par sexe (éditions avec quotas) */
+  remainingByGender?: GenderQuota;
 };

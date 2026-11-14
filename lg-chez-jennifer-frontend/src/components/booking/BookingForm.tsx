@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { type EventEdition, type PackChoice, formatPrice } from "@/lib/catalog";
+import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/components/PaymentBadges";
 import { CheckIcon, LockIcon, MinusIcon, PlusIcon } from "@/components/icons";
@@ -32,6 +32,8 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   // pack offert : un choix (modèle + taille) par place, gardé même si on retire puis remet une place
   const [packs, setPacks] = useState<PackChoice[]>([]);
+  // participants : sexe (quotas filles / garçons) et nom, un par place
+  const [people, setPeople] = useState<{ name: string; gender: Gender | "" }[]>([]);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -46,8 +48,28 @@ export function BookingForm({ event }: { event: EventEdition }) {
       next[i] = { ...(next[i] ?? { style: "", size: "" }), ...patch };
       return next;
     });
-  /** numéros des étapes : le pack s'insère après les passes */
-  const n = pack ? { infos: 3, pay: 4 } : { infos: 2, pay: 3 };
+  const genders = event.genders;
+  const teams = event.teams?.length ? event.teams : undefined;
+  const askPeople = !!genders || !!teams;
+  const seatPeople = useMemo(() => Array.from({ length: askPeople ? seats : 0 }, (_, i) => people[i] ?? { name: "", gender: "" as const }), [askPeople, seats, people]);
+  const setPerson = (i: number, patch: Partial<{ name: string; gender: Gender }>) => {
+    setPeople((p) => {
+      const next = [...p];
+      next[i] = { ...(next[i] ?? { name: "", gender: "" }), ...patch };
+      return next;
+    });
+    // pré-choisit le modèle du pack qui correspond (ex. « Crop top (fille) »)
+    if (patch.gender && pack && !packs[i]?.style) {
+      const word = patch.gender === "fille" ? "fille" : "garçon";
+      const style = pack.styles.find((s) => s.toLowerCase().includes(word));
+      if (style) setPack(i, { style });
+    }
+  };
+  const chosen = (g: Gender) => seatPeople.filter((p) => p.gender === g).length;
+  const left = (g: Gender) => event.remainingByGender?.[g] ?? genders?.[g] ?? 0;
+  /** étape « participants » (sexe, nom, pack) entre les passes et les infos */
+  const perSeat = askPeople || !!pack;
+  const n = perSeat ? { infos: 3, pay: 4 } : { infos: 2, pay: 3 };
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -56,11 +78,21 @@ export function BookingForm({ event }: { event: EventEdition }) {
       e.items = maxSeats < MAX_SEATS ? `Il ne reste que ${maxSeats} place${maxSeats > 1 ? "s" : ""}.` : `Pas plus de ${MAX_SEATS} places par commande.`;
     if (name.trim().length < 2) e.name = "Indique ton nom et prénom.";
     if (!phoneOk(phone)) e.phone = "Numéro à 10 chiffres, ex. 07 07 07 07 07.";
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Adresse e-mail invalide.";
+    if (!email.trim()) e.email = "Indique ton e-mail : tes billets y sont envoyés.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Adresse e-mail invalide.";
     if (!method) e.method = "Choisis Wave ou Orange Money.";
     if (pack && seatPacks.some((p) => !p.style || !p.size)) e.packs = `Choisis le modèle et la taille pour ${seats > 1 ? "chaque place" : "ton pack"}.`;
+    if (genders) {
+      if (seatPeople.some((p) => !p.gender)) e.people = `Indique fille ou garçon pour ${seats > 1 ? "chaque place" : "ta place"}.`;
+      for (const g of ["fille", "garcon"] as const) {
+        const l = event.remainingByGender?.[g] ?? genders[g];
+        if (seatPeople.filter((p) => p.gender === g).length > l)
+          e.people = l === 0 ? `Plus de place pour les ${g === "fille" ? "filles" : "garçons"}.` : `Il ne reste que ${l} place${l > 1 ? "s" : ""} pour les ${g === "fille" ? "filles" : "garçons"}.`;
+      }
+    }
+    if (askPeople && seatPeople.some((p, i) => i > 0 && p.name.trim().length < 2)) e.names = "Indique le nom de chaque personne.";
     return e;
-  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks]);
+  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks, genders, askPeople, seatPeople, event.remainingByGender]);
 
   const show = (k: string) => (touched[k] || touched.submit) && errors[k];
 
@@ -83,6 +115,9 @@ export function BookingForm({ event }: { event: EventEdition }) {
         buyer: { name: name.trim(), phone, ...(email ? { email: email.trim() } : {}) },
         paymentMethod: method!,
         ...(pack ? { packs: seatPacks } : {}),
+        ...(askPeople
+          ? { participants: seatPeople.map((p, i) => ({ ...(i > 0 ? { name: p.name.trim() } : {}), ...(p.gender ? { gender: p.gender } : {}) })) }
+          : {}),
       });
       try {
         sessionStorage.setItem("jey:last-order", res.order.id);
@@ -149,39 +184,104 @@ export function BookingForm({ event }: { event: EventEdition }) {
           {show("items") && <FieldError>{errors.items}</FieldError>}
         </fieldset>
 
-        {/* 2 — pack offert (éditions qui en proposent un) */}
-        {pack && seats > 0 && (
+        {/* 2 — participants : sexe, nom, pack (éditions qui le demandent) */}
+        {perSeat && seats > 0 && (
           <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
-            <legend className="sr-only">{pack.label}</legend>
-            <StepTitle n={2} title={seats > 1 ? "Vos packs" : "Ton pack"} hint={`${pack.label} offert avec chaque place : choisis le modèle et la taille.`} />
+            <legend className="sr-only">Participants</legend>
+            <StepTitle
+              n={2}
+              title={seats > 1 ? "Les participants" : askPeople ? "Ta place" : "Ton pack"}
+              hint={[
+                genders ? `${genders.fille} places filles · ${genders.garcon} places garçons.` : "",
+                pack ? `${pack.label} offert avec chaque place.` : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            />
+            {teams && (
+              <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-night px-4 py-3 text-sm text-paper-muted">
+                <span>Équipe tirée au sort au paiement :</span>
+                {teams.map((t) => (
+                  <span key={t.name} className="inline-flex items-center gap-1.5 font-semibold text-paper">
+                    <span className="h-3 w-3 rounded-full" style={{ background: t.color }} aria-hidden /> {t.name}
+                  </span>
+                ))}
+              </div>
+            )}
             <ul className="mt-6 space-y-4">
-              {seatPacks.map((p, i) => (
-                <li key={i} className="rounded-2xl border border-line p-4 sm:p-5">
-                  {seats > 1 && <p className="mb-3 text-sm font-semibold text-paper">Place {i + 1}{i === 0 ? " (toi)" : ""}</p>}
-                  <div
-                    className="flex flex-wrap gap-2 outline-none"
-                    role="radiogroup"
-                    aria-label={`Modèle — place ${i + 1}`}
-                    tabIndex={-1}
-                    aria-invalid={!!show("packs") && (!p.style || !p.size)}
-                  >
-                    {pack.styles.map((s) => (
-                      <Chip key={s} active={p.style === s} onClick={() => setPack(i, { style: s })}>
-                        {s}
-                      </Chip>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={`Taille — place ${i + 1}`}>
-                    <span className="mr-1 text-xs text-paper-dim">Taille</span>
-                    {pack.sizes.map((s) => (
-                      <Chip key={s} small active={p.size === s} onClick={() => setPack(i, { size: s })}>
-                        {s}
-                      </Chip>
-                    ))}
-                  </div>
-                </li>
-              ))}
+              {Array.from({ length: seats }, (_, i) => {
+                const p = seatPacks[i];
+                const who = seatPeople[i];
+                return (
+                  <li key={i} className="space-y-3 rounded-2xl border border-line p-4 sm:p-5">
+                    {seats > 1 && <p className="text-sm font-semibold text-paper">Place {i + 1}{i === 0 ? " (toi)" : ""}</p>}
+                    {askPeople && i > 0 && (
+                      <input
+                        value={who.name}
+                        onChange={(e) => setPerson(i, { name: e.target.value })}
+                        onBlur={() => setTouched((t) => ({ ...t, names: true }))}
+                        autoComplete="off"
+                        aria-label={`Nom et prénom — place ${i + 1}`}
+                        aria-invalid={!!show("names") && who.name.trim().length < 2}
+                        placeholder="Nom et prénom"
+                        className={inputCls(!!show("names") && who.name.trim().length < 2)}
+                      />
+                    )}
+                    {genders && (
+                      <div
+                        className="flex flex-wrap items-center gap-2 outline-none"
+                        role="radiogroup"
+                        aria-label={`Fille ou garçon — place ${i + 1}`}
+                        tabIndex={-1}
+                        aria-invalid={!!show("people") && !who.gender}
+                      >
+                        {(["fille", "garcon"] as const).map((g) => {
+                          const full = who.gender !== g && chosen(g) >= left(g);
+                          return (
+                            <Chip key={g} active={who.gender === g} disabled={full} onClick={() => setPerson(i, { gender: g })}>
+                              {GENDER_LABEL[g]}
+                              {full && <span className="ml-1.5 text-xs font-normal">· complet</span>}
+                            </Chip>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {pack && p && (
+                      <>
+                        <div
+                          className="flex flex-wrap gap-2 outline-none"
+                          role="radiogroup"
+                          aria-label={`Modèle — place ${i + 1}`}
+                          tabIndex={-1}
+                          aria-invalid={!!show("packs") && (!p.style || !p.size)}
+                        >
+                          {pack.styles.map((s) => (
+                            <Chip key={s} active={p.style === s} onClick={() => setPack(i, { style: s })}>
+                              {s}
+                            </Chip>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={`Taille — place ${i + 1}`}>
+                          <span className="mr-1 text-xs text-paper-dim">Taille</span>
+                          {pack.sizes.map((s) => (
+                            <Chip key={s} small active={p.size === s} onClick={() => setPack(i, { size: s })}>
+                              {s}
+                            </Chip>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+            {genders && (
+              <p className="mt-4 text-xs text-paper-dim">
+                Encore {left("fille")} place{left("fille") > 1 ? "s" : ""} fille{left("fille") > 1 ? "s" : ""} · {left("garcon")} place{left("garcon") > 1 ? "s" : ""} garçon{left("garcon") > 1 ? "s" : ""}.
+              </p>
+            )}
+            {show("people") && <FieldError>{errors.people}</FieldError>}
+            {show("names") && <FieldError>{errors.names}</FieldError>}
             {show("packs") && <FieldError>{errors.packs}</FieldError>}
           </fieldset>
         )}
@@ -189,7 +289,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
         {/* infos */}
         <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
           <legend className="sr-only">Tes informations</legend>
-          <StepTitle n={n.infos} title="Tes infos" hint="Ton billet est lié à ce numéro." />
+          <StepTitle n={n.infos} title="Tes infos" hint="Ta commande est liée à ce numéro." />
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <Field label="Nom et prénom" error={show("name") ? errors.name : undefined} className="sm:col-span-2">
               <input
@@ -217,7 +317,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
                 />
               </div>
             </Field>
-            <Field label="E-mail (facultatif)" hint="Pour recevoir ton billet aussi par e-mail." error={show("email") ? errors.email : undefined}>
+            <Field label="E-mail" hint="Tes billets (QR codes) te sont envoyés à cette adresse." error={show("email") ? errors.email : undefined}>
               <input
                 type="email"
                 value={email}
@@ -284,13 +384,19 @@ export function BookingForm({ event }: { event: EventEdition }) {
                 </li>
               ))}
             {seats === 0 && <li className="text-cacao-muted">Aucun pass sélectionné.</li>}
-            {pack &&
-              seatPacks.map((p, i) => (
-                <li key={`pack-${i}`} className="flex justify-between gap-4 text-cacao-muted">
-                  <span>{pack.label}{seats > 1 ? ` ${i + 1}` : ""}</span>
-                  <span>{p.style && p.size ? `${p.style} · ${p.size}` : "à choisir"}</span>
-                </li>
-              ))}
+            {perSeat &&
+              Array.from({ length: seats }, (_, i) => {
+                const p = seatPacks[i];
+                const who = seatPeople[i];
+                const label = askPeople ? (i === 0 ? name.trim() || "Toi" : who?.name.trim() || `Place ${i + 1}`) : `${pack?.label}${seats > 1 ? ` ${i + 1}` : ""}`;
+                const bits = [who?.gender ? GENDER_LABEL[who.gender] : "", p?.style && p.size ? `${p.style} · ${p.size}` : ""].filter(Boolean);
+                return (
+                  <li key={`seat-${i}`} className="flex justify-between gap-4 text-cacao-muted">
+                    <span className="truncate">{label}</span>
+                    <span className="text-right">{bits.length ? bits.join(" · ") : "à compléter"}</span>
+                  </li>
+                );
+              })}
           </ul>
           <div className="mt-5 flex items-baseline justify-between border-t border-cacao-line pt-5">
             <span className="text-sm">
@@ -321,7 +427,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
             )}
           </button>
           <p className="mt-4 text-center text-xs leading-relaxed text-cacao-muted">
-            Tu valides le paiement sur ton téléphone. Ton billet s&apos;affiche dès la confirmation.
+            Tu valides le paiement sur ton téléphone. Ton billet s&apos;affiche dès la confirmation{teams ? ", avec ton équipe" : ""} et t&apos;est envoyé par e-mail.
           </p>
         </div>
       </aside>
@@ -330,16 +436,17 @@ export function BookingForm({ event }: { event: EventEdition }) {
 }
 
 /* -------------------------------------------------------------------------- */
-function Chip({ active, small, onClick, children }: { active: boolean; small?: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({ active, small, disabled, onClick, children }: { active: boolean; small?: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
+      disabled={disabled}
       onClick={onClick}
       className={`rounded-full border font-semibold transition-colors ${small ? "min-w-11 px-3 py-2 text-sm" : "px-4 py-2.5 text-sm"} ${
         active ? "border-transparent bg-paper text-cacao" : "border-line-strong text-paper-muted hover:border-peach hover:text-paper"
-      }`}
+      } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line-strong disabled:hover:text-paper-muted`}
     >
       {children}
     </button>

@@ -43,6 +43,11 @@ function toDraft(e?: AdminEvent) {
     packLabel: e?.pack?.label ?? "Pack personnalisé",
     packStyles: e?.pack?.styles.join("\n") ?? "T-shirt noir (garçon)\nCrop top noir (fille)",
     packSizes: e?.pack?.sizes.join(", ") ?? "XS, S, M, L, XL, XXL",
+    gendersOn: !!e?.genders,
+    girls: String(e?.genders?.fille ?? Math.floor((e?.capacity ?? 60) / 2)),
+    boys: String(e?.genders?.garcon ?? Math.ceil((e?.capacity ?? 60) / 2)),
+    teamsOn: !!e?.teams?.length,
+    teams: (e?.teams?.length ? e.teams : DEFAULT_TEAMS).map((t) => ({ key: newKey(), ...t })),
     status: e?.status ?? ("draft" as EventStatus),
     note: e?.note ?? "",
     tiers: (e?.tiers.length
@@ -53,6 +58,13 @@ function toDraft(e?: AdminEvent) {
         ]) as TierDraft[],
   };
 }
+
+const DEFAULT_TEAMS = [
+  { name: "Rouge", color: "#e3092b" },
+  { name: "Bleu", color: "#2f6fed" },
+  { name: "Vert", color: "#1fae5b" },
+  { name: "Jaune", color: "#f5c518" },
+];
 
 export function EventForm({ event }: { event?: AdminEvent }) {
   const router = useRouter();
@@ -91,6 +103,8 @@ export function EventForm({ event }: { event?: AdminEvent }) {
             sizes: d.packSizes.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean),
           }
         : undefined,
+      genders: d.gendersOn ? { fille: Number(d.girls), garcon: Number(d.boys) } : undefined,
+      teams: d.teamsOn ? d.teams.map(({ name, color }) => ({ name: name.trim(), color })).filter((t) => t.name) : undefined,
       status: d.status,
       note: d.note || undefined,
       tiers: d.tiers.map((t) => ({
@@ -179,6 +193,8 @@ export function EventForm({ event }: { event?: AdminEvent }) {
             {(id) => <Textarea id={id} rows={2} value={d.note} onChange={(e) => set("note", e.target.value)} maxLength={400} />}
           </Field>
         </Card>
+
+        <ParticipantsCard d={d} set={set} />
 
         <Card className="space-y-5 p-5 sm:p-6">
           <label className="flex cursor-pointer items-start gap-3">
@@ -313,5 +329,80 @@ export function EventForm({ event }: { event?: AdminEvent }) {
         </Card>
       </aside>
     </form>
+  );
+}
+
+type Draft = ReturnType<typeof toDraft>;
+
+/** Quotas filles / garçons et équipes tirées au sort (ex. Beach Party). */
+function ParticipantsCard({ d, set }: { d: Draft; set: <K extends keyof Draft>(k: K, v: Draft[K]) => void }) {
+  const cap = Number(d.capacity) || 0;
+  const sum = (Number(d.girls) || 0) + (Number(d.boys) || 0);
+  const n = d.teams.filter((t) => t.name.trim()).length || 1;
+  const setTeam = (key: string, patch: Partial<{ name: string; color: string }>) => set("teams", d.teams.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+  return (
+    <Card className="space-y-5 p-5 sm:p-6">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input type="checkbox" checked={d.gendersOn} onChange={(e) => set("gendersOn", e.target.checked)} className="mt-1 h-4 w-4 accent-[#ffc4a0]" />
+        <span>
+          <span className="block text-lg font-semibold text-paper">Places filles / garçons</span>
+          <span className="block text-sm text-paper-muted">À la réservation, chaque place indique fille ou garçon ; la vente s&apos;arrête quand un quota est atteint.</span>
+        </span>
+      </label>
+      {d.gendersOn && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Places filles">{(id) => <Input id={id} type="number" min={0} value={d.girls} onChange={(e) => set("girls", e.target.value)} />}</Field>
+          <Field label="Places garçons">{(id) => <Input id={id} type="number" min={0} value={d.boys} onChange={(e) => set("boys", e.target.value)} />}</Field>
+          <p className={`text-sm sm:col-span-2 ${sum === cap ? "text-paper-dim" : "text-amber-200"}`}>
+            Total {sum} / capacité {cap}{sum === cap ? "" : " : les deux doivent être égaux."}
+          </p>
+        </div>
+      )}
+
+      <label className="flex cursor-pointer items-start gap-3 border-t border-line pt-5">
+        <input type="checkbox" checked={d.teamsOn} onChange={(e) => set("teamsOn", e.target.checked)} className="mt-1 h-4 w-4 accent-[#ffc4a0]" />
+        <span>
+          <span className="block text-lg font-semibold text-paper">Équipes tirées au sort</span>
+          <span className="block text-sm text-paper-muted">Au paiement, chaque participant est placé au hasard dans une équipe qui a encore de la place.</span>
+        </span>
+      </label>
+      {d.teamsOn && (
+        <div className="space-y-3">
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {d.teams.map((t, i) => (
+              <li key={t.key} className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={t.color}
+                  onChange={(e) => setTeam(t.key, { color: e.target.value })}
+                  aria-label={`Couleur de l'équipe ${i + 1}`}
+                  className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-line-strong bg-transparent"
+                />
+                <Input aria-label={`Nom de l'équipe ${i + 1}`} value={t.name} onChange={(e) => setTeam(t.key, { name: e.target.value })} maxLength={30} />
+                <button
+                  type="button"
+                  onClick={() => set("teams", d.teams.filter((x) => x.key !== t.key))}
+                  disabled={d.teams.length <= 2}
+                  aria-label={`Retirer l'équipe ${t.name || i + 1}`}
+                  className="shrink-0 rounded-full px-2 text-paper-dim hover:text-wolf-bright disabled:opacity-30"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          {d.teams.length < 8 && (
+            <button type="button" onClick={() => set("teams", [...d.teams, { key: newKey(), name: "", color: "#888888" }])} className="text-sm font-semibold text-peach hover:underline">
+              + Ajouter une équipe
+            </button>
+          )}
+          <p className="text-sm text-paper-dim">
+            {d.gendersOn
+              ? `Par équipe : ${Math.ceil((Number(d.girls) || 0) / n)} filles + ${Math.ceil((Number(d.boys) || 0) / n)} garçons.`
+              : `Par équipe : ${Math.ceil(cap / n)} personnes.`}
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }

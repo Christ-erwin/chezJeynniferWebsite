@@ -1,3 +1,4 @@
+import type { Gender, TeamDef } from "@/lib/catalog";
 /**
  * Point d'entrée unique pour parler au backend NestJS.
  * L'URL de base vient de NEXT_PUBLIC_API_BASE_URL (voir .env.local).
@@ -58,11 +59,21 @@ export type CreateOrderInput = {
   paymentMethod: PaymentMethod;
   /** une entrée par place, pour les éditions avec pack offert */
   packs?: { style: string; size: string }[];
+  /** une entrée par place (éditions avec quotas filles / garçons ou équipes) */
+  participants?: { name?: string; gender?: Gender }[];
 };
 
 export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "expired";
 
-export type Ticket = { code: string; label: string; holder: string; pack?: { style: string; size: string } };
+export type Ticket = {
+  code: string;
+  label: string;
+  holder: string;
+  pack?: { style: string; size: string };
+  gender?: Gender;
+  /** équipe tirée au sort au paiement */
+  team?: TeamDef;
+};
 
 export type Order = {
   id: string;

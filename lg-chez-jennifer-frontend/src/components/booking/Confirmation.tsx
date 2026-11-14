@@ -5,7 +5,7 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { gsap } from "gsap";
 import { getOrder, type Order } from "@/lib/api";
-import { dateParts, formatPrice } from "@/lib/catalog";
+import { dateParts, formatPrice, isLightColor } from "@/lib/catalog";
 import { whatsappLink } from "@/lib/site";
 import { PassButton, GhostButton, Logo } from "@/components/ui";
 import { CheckIcon, PinIcon, CalendarIcon, WhatsappIcon } from "@/components/icons";
@@ -133,13 +133,22 @@ export function Confirmation({ orderId }: { orderId: string }) {
         <p className="t-script mt-6 text-4xl text-peach">C&apos;est réservé !</p>
         <h1 className="t-display mt-2 text-5xl text-paper sm:text-6xl">On t&apos;attend, {order.buyer.name.split(" ")[0]}.</h1>
         <p className="mx-auto mt-4 max-w-lg text-paper-muted">
-          Garde cette page (ou fais une capture) : chaque QR code est une entrée. Commande {order.reference} · {formatPrice(order.total)}.
+          Chaque QR code est une entrée{order.buyer.email ? <> : tes billets te sont aussi envoyés à <strong className="text-paper">{order.buyer.email}</strong></> : <> : garde cette page ou fais une capture</>}. Commande {order.reference} · {formatPrice(order.total)}.
         </p>
       </div>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2">
         {order.tickets.map((t, i) => (
           <article key={t.code} className="cf-ticket relative overflow-hidden rounded-[1.4rem] bg-cream text-cacao">
+            {t.team && (
+              <div
+                className="flex items-center justify-between px-6 py-2.5 text-sm font-bold uppercase tracking-[0.14em]"
+                style={{ background: t.team.color, color: isLightColor(t.team.color) ? "#141213" : "#ffffff" }}
+              >
+                <span>Équipe {t.team.name}</span>
+                <span aria-hidden>●</span>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-4 p-6">
               <div>
                 <Logo tone="cacao" className="text-sm" />

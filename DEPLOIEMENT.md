@@ -50,7 +50,22 @@ Pour la tester avant d'avoir les clés : ajouter temporairement `ALLOW_MOCK_PAYM
   (événements `payment.*`). Copier le secret `whsec_…` dans `GENIUSPAY_WEBHOOK_SECRET`.
 - Faire un achat test en **sandbox** (Wave puis Orange Money), puis passer aux clés **live**.
 
-## 4. Avant d'ouvrir la vente
+## 4. Billets par e-mail (Resend)
+
+1. Créer un compte sur [resend.com](https://resend.com) (gratuit jusqu'à 3 000 e-mails/mois).
+2. **Domains → Add Domain** → `chezjeynnifer.online`. Resend affiche 3–4 enregistrements DNS
+   (TXT / MX) : les ajouter chez le registrar du domaine, puis **Verify**.
+3. **API Keys → Create API Key** (permission « Sending access »).
+4. Railway → Variables :
+   ```
+   RESEND_API_KEY=re_...
+   MAIL_FROM=Les Soirées chez Jeynnifer <billets@chezjeynnifer.online>
+   MAIL_REPLY_TO=<ton adresse e-mail de contact>
+   ```
+Les billets partent automatiquement dès qu'un paiement est confirmé (en ligne ou vente
+enregistrée dans l'admin). L'admin peut les renvoyer depuis le détail d'une commande.
+
+## 5. Avant d'ouvrir la vente
 
 - [ ] `/api/health` répond
 - [ ] le site affiche les éditions venant de l'API (admin → Éditions)
@@ -58,6 +73,7 @@ Pour la tester avant d'avoir les clés : ajouter temporairement `ALLOW_MOCK_PAYM
 - [ ] éditions de démonstration dépubliées si elles ne sont pas réelles
 - [ ] achat test sandbox : paiement → billet → page statut → scan au contrôle
 - [ ] clés **live** en place, `ALLOW_MOCK_PAYMENTS` absent
+- [ ] e-mail des billets reçu (vérifier aussi les spams)
 - [ ] un vrai petit achat en live
 
 ## Sauvegardes

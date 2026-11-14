@@ -114,6 +114,21 @@ export type PassTier = {
 export type EventPack = { label: string; styles: string[]; sizes: string[] };
 export type PackChoice = { style: string; size: string };
 
+export type Gender = "fille" | "garcon";
+export const GENDER_LABEL: Record<Gender, string> = { fille: "Fille", garcon: "Garçon" };
+/** places par sexe (la somme = capacité) */
+export type GenderQuota = Record<Gender, number>;
+/** équipe tirée au sort au paiement */
+export type TeamDef = { name: string; color: string };
+
+/** Couleur claire (jaune…) : texte foncé par-dessus. */
+export function isLightColor(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return false;
+  const v = parseInt(m[1], 16);
+  return 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255) > 160;
+}
+
 /**
  * Une édition telle que publiée par l'API (GET /api/events).
  * Les éditions se gèrent dans l'espace admin (/admin/evenements).
@@ -138,6 +153,12 @@ export type EventEdition = {
   salesOpenAt?: string;
   /** pack offert : modèle et taille à choisir pour chaque place */
   pack?: EventPack;
+  /** places par sexe : on demande fille / garçon pour chaque place */
+  genders?: GenderQuota;
+  /** places restantes par sexe */
+  remainingByGender?: GenderQuota;
+  /** équipes tirées au sort au paiement */
+  teams?: TeamDef[];
   /** calculé à la lecture (lib/events.ts) : la billetterie est-elle ouverte ? */
   salesOpen: boolean;
 };

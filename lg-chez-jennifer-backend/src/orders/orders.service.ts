@@ -1,10 +1,12 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { EventsService } from '../events/events.service.js';
-import type { EventRecord, PublicEvent } from '../events/event.types.js';
+import { GENDERS, type EventRecord, type Gender, type GenderQuota, type PublicEvent } from '../events/event.types.js';
+import { MailService } from '../mail/mail.service.js';
 import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment.provider.js';
 import { OrdersStore } from './orders.store.js';
-import type { Order, OrderItem, OrderStatus, PackChoice, PaymentMethod, PublicOrder, Ticket } from './order.types.js';
+import type { Order, OrderItem, OrderStatus, PackChoice, Participant, PaymentMethod, PublicOrder, Ticket } from './order.types.js';
+import { assignTeams } from './teams.js';
 
 /** Une commande non payée bloque ses places pendant ce délai. */
 const HOLD_MS = 20 * 60 * 1000;
@@ -19,7 +21,10 @@ export type CreateOrderInput = {
   buyer?: { name?: unknown; phone?: unknown; email?: unknown };
   paymentMethod?: unknown;
   packs?: unknown;
+  participants?: unknown;
 };
+
+const GENDER_LABEL: Record<Gender, string> = { fille: 'fille', garcon: 'garçon' };
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O/1/I : lisible à l'oral
 function code(len: number) {
@@ -50,6 +55,7 @@ export class OrdersService {
     private readonly store: OrdersStore,
     private readonly events: EventsService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    private readonly mail: MailService,
   ) {}
 
   /* ============================== places ================================ */
@@ -59,6 +65,21 @@ export class OrdersService {
       .all()
       .filter((o) => o.eventId === eventId && holds(o))
       .reduce((s, o) => s + seatsOf(o), 0);
+  }
+
+  /** Places tenues (payées ou en attente) par sexe. */
+  seatsTakenByGender(eventId: string): GenderQuota {
+    this.expireStaleInMemory();
+    return this.countGenders(eventId);
+  }
+
+  private countGenders(eventId: string): GenderQuota {
+    const taken: GenderQuota = { fille: 0, garcon: 0 };
+    for (const o of this.store.all()) {
+      if (o.eventId !== eventId || !holds(o)) continue;
+      for (const p of o.participants ?? []) if (p.gender) taken[p.gender]++;
+    }
+    return taken;
   }
 
   soldTierIds(eventId: string): Set<string> {
@@ -77,7 +98,13 @@ export class OrdersService {
       ...rest,
       venue: { name: venue.name, city: venue.city, revealedAfterBooking: venue.revealedAfterBooking },
       remaining: Math.max(e.capacity - this.seatsTaken(e.id), 0),
+      ...(e.genders ? { remainingByGender: this.remainingByGender(e) } : {}),
     };
+  }
+
+  private remainingByGender(e: EventRecord): GenderQuota {
+    const taken = this.seatsTakenByGender(e.id);
+    return { fille: Math.max((e.genders?.fille ?? 0) - taken.fille, 0), garcon: Math.max((e.genders?.garcon ?? 0) - taken.garcon, 0) };
   }
 
   /* ========================= commande en ligne ========================= */
@@ -91,12 +118,13 @@ export class OrdersService {
     }
 
     const items = this.parseItems(event, input.items, MAX_SEATS_PER_ORDER);
-    const buyer = this.parseBuyer(input.buyer);
+    const buyer = this.parseBuyer(input.buyer, true);
     const packs = this.parsePacks(event, items, input.packs, true);
+    const participants = this.parseParticipants(event, items, input.participants, true);
     const method = input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money') throw new BadRequestException('Choisis Wave ou Orange Money.');
 
-    const order = await this.reserve(event, items, buyer, method, this.provider.name, packs);
+    const order = await this.reserve(event, items, buyer, method, this.provider.name, packs, participants);
 
     try {
       const init = await this.provider.init(order);
@@ -124,7 +152,6 @@ export class OrdersService {
     return this.toPublic(order);
   }
 
-  /** Webhook : on retrouve la commande par sa référence et on relit le statut. */
   /** Webhook de l'agrégateur : retrouve la commande puis relit son statut à la source. */
   async handleNotification(ids: { orderId?: string; providerRef?: string }) {
     const order =
@@ -174,12 +201,14 @@ export class OrdersService {
     if (!event) throw new BadRequestException('Édition introuvable.');
     if (event.status === 'cancelled') throw new BadRequestException('Cette édition est annulée.');
     const items = this.parseItems(event, input.items, 50);
-    const buyer = this.parseBuyer(input.buyer);
+    const buyer = this.parseBuyer(input.buyer, false);
     // vente sur place : le pack peut être noté plus tard, mais s'il est donné il doit être valide
     const packs = this.parsePacks(event, items, input.packs, false);
+    // le sexe reste obligatoire (quotas, équipes) ; les noms sont facultatifs
+    const participants = this.parseParticipants(event, items, input.participants, false);
     const method = input.method ?? input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money' && method !== 'cash') throw new BadRequestException('Moyen de paiement invalide.');
-    const order = await this.reserve(event, items, buyer, method, 'manual', packs);
+    const order = await this.reserve(event, items, buyer, method, 'manual', packs, participants);
     return this.setStatus(order.id, 'paid', 'vente enregistrée par l’admin');
   }
 
@@ -211,6 +240,65 @@ export class OrdersService {
         updatedAt: now,
         history: [...(o.history ?? []), { at: now, action: 'packs modifiés' }],
       };
+      this.store.set(next);
+      return next;
+    });
+  }
+
+  /** Corrige un billet : nom du participant, ou changement d'équipe (échange entre amis…). */
+  updateTicket(id: string, ticketCode: string, raw: { holder?: unknown; team?: unknown }): Promise<Order> {
+    return this.store.mutate(() => {
+      const o = this.getAdmin(id);
+      const event = this.events.require(o.eventId);
+      const t = o.tickets.find((x) => x.code === ticketCode);
+      if (!t) throw new NotFoundException('Billet introuvable.');
+      const patch: Partial<Ticket> = {};
+      const changes: string[] = [];
+      if (raw.holder !== undefined) {
+        const holder = typeof raw.holder === 'string' ? raw.holder.trim().replace(/\s+/g, ' ') : '';
+        if (holder.length < 2 || holder.length > 80) throw new BadRequestException('Nom du participant : 2 à 80 caractères.');
+        if (holder !== t.holder) {
+          patch.holder = holder;
+          changes.push(`nom « ${holder} »`);
+        }
+      }
+      if (raw.team !== undefined) {
+        const team = event.teams?.find((x) => x.name === raw.team);
+        if (!team) throw new BadRequestException('Équipe inconnue.');
+        if (team.name !== t.team?.name) {
+          patch.team = { ...team };
+          changes.push(`équipe ${team.name}`);
+        }
+      }
+      if (!changes.length) return o;
+      const now = new Date().toISOString();
+      const next: Order = {
+        ...o,
+        tickets: o.tickets.map((x) => (x.code === ticketCode ? { ...x, ...patch } : x)),
+        updatedAt: now,
+        history: [...(o.history ?? []), { at: now, action: `billet ${ticketCode} : ${changes.join(', ')}` }],
+      };
+      this.store.set(next);
+      return next;
+    });
+  }
+
+  /** Renvoie les billets par e-mail (depuis l'admin). */
+  async resendEmail(id: string): Promise<Order> {
+    const o = this.getAdmin(id);
+    if (o.status !== 'paid') throw new BadRequestException('Commande non payée : pas de billets à envoyer.');
+    if (!o.buyer.email) throw new BadRequestException('Pas d’adresse e-mail pour cette commande.');
+    if (!this.mail.enabled) throw new BadRequestException('Envoi d’e-mails non configuré (RESEND_API_KEY).');
+    try {
+      await this.mail.sendTickets(o, this.events.get(o.eventId));
+    } catch (e) {
+      this.log.error(`e-mail ${o.reference} : ${(e as Error).message}`);
+      throw new BadRequestException('L’e-mail n’a pas pu être envoyé. Réessaie dans un instant.');
+    }
+    return this.store.mutate(() => {
+      const cur = this.getAdmin(id);
+      const now = new Date().toISOString();
+      const next: Order = { ...cur, emailedAt: now, history: [...(cur.history ?? []), { at: now, action: `billets renvoyés à ${cur.buyer.email}` }] };
       this.store.set(next);
       return next;
     });
@@ -301,7 +389,7 @@ export class OrdersService {
       const s = String(v ?? '');
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs'];
+    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs', 'Participants'];
     const rows = orders.map((o) => [
       o.reference,
       o.status,
@@ -318,6 +406,9 @@ export class OrdersService {
       o.tickets.map((t) => t.code).join(' '),
       o.tickets.filter((t) => t.usedAt).length,
       (o.packs ?? []).map((p) => `${p.style} · ${p.size}`).join(' | '),
+      o.tickets
+        .map((t) => [t.holder, t.gender ? GENDER_LABEL[t.gender] : '', t.team ? `équipe ${t.team.name}` : ''].filter(Boolean).join(' · '))
+        .join(' | '),
     ]);
     // BOM + point-virgule : s'ouvre proprement dans Excel en français
     return '﻿' + [head, ...rows].map((r) => r.map(esc).join(';')).join('\n');
@@ -359,18 +450,49 @@ export class OrdersService {
     });
   }
 
-  private parseBuyer(raw: CreateOrderInput['buyer']): Order['buyer'] {
+  /**
+   * Une entrée par place pour les éditions avec quotas par sexe ou équipes :
+   * le sexe (obligatoire si quotas) et le nom de chaque personne. En ligne
+   * (`online`), le nom est obligatoire dès la 2ᵉ place ; la 1ʳᵉ est l'acheteur.
+   */
+  private parseParticipants(event: EventRecord, items: OrderItem[], raw: unknown, online: boolean): Participant[] | undefined {
+    if (!event.genders && !event.teams?.length) return undefined;
+    const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
+    if (!Array.isArray(raw) || raw.length === 0) {
+      if (event.genders) throw new BadRequestException('Indique fille ou garçon pour chaque place.');
+      return undefined;
+    }
+    if (raw.length !== seats) throw new BadRequestException(`Il faut une ligne par participant (${seats}).`);
+    return (raw as { name?: unknown; gender?: unknown }[]).map((p, i) => {
+      const gender = p?.gender;
+      if (event.genders && !GENDERS.includes(gender as Gender)) throw new BadRequestException(`Place ${i + 1} : fille ou garçon ?`);
+      const name = typeof p?.name === 'string' ? p.name.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+      if (online && i > 0 && name.length < 2) throw new BadRequestException(`Place ${i + 1} : indique le nom de la personne.`);
+      return { ...(name ? { name } : {}), ...(event.genders ? { gender: gender as Gender } : {}) };
+    });
+  }
+
+  private parseBuyer(raw: CreateOrderInput['buyer'], requireEmail: boolean): Order['buyer'] {
     const name = typeof raw?.name === 'string' ? raw.name.trim().replace(/\s+/g, ' ') : '';
     if (name.length < 2 || name.length > 80) throw new BadRequestException('Indique ton nom et prénom.');
     const phone = typeof raw?.phone === 'string' ? normalizeCiPhone(raw.phone) : null;
     if (!phone) throw new BadRequestException('Numéro de téléphone ivoirien invalide (10 chiffres, ex. 07 07 07 07 07).');
     const email = typeof raw?.email === 'string' ? raw.email.trim() : '';
+    if (!email && requireEmail) throw new BadRequestException('Indique ton adresse e-mail : tes billets y sont envoyés.');
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException('Adresse e-mail invalide.');
     return { name, phone, ...(email ? { email } : {}) };
   }
 
   /** Bloque les places sous verrou (pas de survente) et crée la commande en attente. */
-  private reserve(event: EventRecord, items: OrderItem[], buyer: Order['buyer'], method: PaymentMethod, provider: Order['provider'], packs?: PackChoice[]): Promise<Order> {
+  private reserve(
+    event: EventRecord,
+    items: OrderItem[],
+    buyer: Order['buyer'],
+    method: PaymentMethod,
+    provider: Order['provider'],
+    packs?: PackChoice[],
+    participants?: Participant[],
+  ): Promise<Order> {
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     return this.store.mutate(() => {
       this.expireStaleInMemory();
@@ -381,6 +503,17 @@ export class OrdersService {
       if (taken + seats > event.capacity) {
         const left = Math.max(event.capacity - taken, 0);
         throw new ConflictException(left === 0 ? 'Cette soirée est complète.' : `Il ne reste que ${left} place(s).`);
+      }
+      if (event.genders && participants) {
+        const takenG = this.countGenders(event.id);
+        for (const g of GENDERS) {
+          const want = participants.filter((p) => p.gender === g).length;
+          const left = Math.max(event.genders[g] - takenG[g], 0);
+          if (want > left) {
+            const who = g === 'fille' ? 'filles' : 'garçons';
+            throw new ConflictException(left === 0 ? `Plus de place pour les ${who}.` : `Il ne reste que ${left} place(s) pour les ${who}.`);
+          }
+        }
       }
       const now = new Date().toISOString();
       const order: Order = {
@@ -394,6 +527,7 @@ export class OrdersService {
         buyer,
         items,
         ...(packs ? { packs } : {}),
+        ...(participants ? { participants } : {}),
         total: items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
         currency: 'XOF',
         createdAt: now,
@@ -417,8 +551,9 @@ export class OrdersService {
     return order;
   }
 
-  private setStatus(id: string, status: OrderStatus, note?: string): Promise<Order> {
-    return this.store.mutate(() => {
+  private async setStatus(id: string, status: OrderStatus, note?: string): Promise<Order> {
+    let justPaid = false;
+    const order = await this.store.mutate(() => {
       const current = this.store.get(id)!;
       if (current.status !== 'pending') return current; // idempotent : un paiement validé ne se dé-valide pas
       const now = new Date().toISOString();
@@ -427,11 +562,27 @@ export class OrdersService {
       if (status === 'paid') {
         next.paidAt = now;
         next.tickets = this.issueTickets(current);
+        justPaid = true;
         this.log.log(`commande payée ${current.reference} — ${current.total} XOF`);
       }
       this.store.set(next);
       return next;
     });
+    if (justPaid) void this.emailTickets(order);
+    return order;
+  }
+
+  /** Envoi automatique après paiement : un échec n'empêche jamais la validation. */
+  private async emailTickets(order: Order) {
+    try {
+      if (!(await this.mail.sendTickets(order, this.events.get(order.eventId)))) return;
+      await this.store.mutate(() => {
+        const cur = this.store.get(order.id);
+        if (cur) this.store.set({ ...cur, emailedAt: new Date().toISOString() });
+      });
+    } catch (e) {
+      this.log.error(`e-mail non envoyé pour ${order.reference} : ${(e as Error).message}`);
+    }
   }
 
   private issueTickets(order: Order): Ticket[] {
@@ -439,8 +590,24 @@ export class OrdersService {
     for (const item of order.items) {
       for (let i = 0; i < item.quantity * item.seats; i++) {
         const pack = order.packs?.[tickets.length];
-        tickets.push({ code: `${order.reference}-${code(4)}`, label: item.label, holder: order.buyer.name, ...(pack ? { pack } : {}) });
+        const who = order.participants?.[tickets.length];
+        tickets.push({
+          code: `${order.reference}-${code(4)}`,
+          label: item.label,
+          holder: who?.name ?? (tickets.length === 0 ? order.buyer.name : `Invité·e de ${order.buyer.name}`),
+          ...(pack ? { pack } : {}),
+          ...(who?.gender ? { gender: who.gender } : {}),
+        });
       }
+    }
+    // équipes : tirage au sort parmi les places encore libres (par sexe)
+    const event = this.events.get(order.eventId);
+    if (event?.teams?.length) {
+      const existing = this.store
+        .all()
+        .filter((o) => o.eventId === order.eventId && o.status === 'paid' && o.id !== order.id)
+        .flatMap((o) => o.tickets);
+      assignTeams(event, existing, tickets);
     }
     return tickets;
   }

@@ -74,7 +74,14 @@ export function seedEvents(): EventRecord[] {
 }
 
 /** Jeynnifer Beach Party, édition 01 : Spéciale Noël à Assinie (affiche du 12 → 13 décembre 2026). */
-export const BEACH_PARTY_NOEL_2026 = (base: Pick<EventRecord, 'status' | 'createdAt' | 'updatedAt'>): EventRecord => ({
+export const BEACH_TEAMS = [
+  { name: 'Rouge', color: '#e3092b' },
+  { name: 'Bleu', color: '#2f6fed' },
+  { name: 'Vert', color: '#1fae5b' },
+  { name: 'Jaune', color: '#f5c518' },
+];
+
+export const BEACH_PARTY_NOEL_2026 =(base: Pick<EventRecord, 'status' | 'createdAt' | 'updatedAt'>): EventRecord => ({
   ...base,
   id: 'beach-party-noel-2026',
   title: 'Beach Party · Spéciale Noël',
@@ -85,9 +92,12 @@ export const BEACH_PARTY_NOEL_2026 = (base: Pick<EventRecord, 'status' | 'create
   endLabel: 'Dim. 13 · 10h00',
   venue: { name: 'Assinie', city: 'Assinie', address: 'Départ en car depuis Abidjan : point de rendez-vous envoyé par WhatsApp', revealedAfterBooking: true },
   cover: '/images/bp-affiche-noel.jpg',
-  capacity: 30,
+  capacity: 32,
   salesOpenAt: '2026-11-16T10:00:00+00:00',
   pack: { label: 'Pack personnalisé', styles: ['T-shirt noir (garçon)', 'Crop top noir (fille)'], sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+  // 16 filles + 16 garçons, répartis au paiement en 4 équipes de 4 filles + 4 garçons
+  genders: { fille: 16, garcon: 16 },
+  teams: BEACH_TEAMS,
   tiers: [
     {
       id: 'beach-pass',
