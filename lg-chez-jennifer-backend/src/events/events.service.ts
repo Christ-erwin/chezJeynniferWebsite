@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { JsonCollection } from '../common/json-collection.js';
+import { dataPath } from '../common/data-path.js';
 import { CONCEPTS, type ConceptSlug, type EventPack, type EventRecord, type EventStatus, type PassTier } from './event.types.js';
 import { seedEvents } from './events.seed.js';
 
@@ -119,7 +120,7 @@ function parseEvent(raw: Record<string, unknown>): Omit<EventRecord, 'id' | 'cre
 
 @Injectable()
 export class EventsService {
-  readonly store = new JsonCollection<EventRecord>(process.env.EVENTS_FILE ?? 'data/events.json', seedEvents);
+  readonly store = new JsonCollection<EventRecord>(process.env.EVENTS_FILE ?? dataPath('events.json'), seedEvents);
 
   get(id: string): EventRecord | undefined {
     return this.store.get(id);

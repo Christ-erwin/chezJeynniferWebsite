@@ -6,7 +6,7 @@ export type EventStatus = 'draft' | 'published' | 'cancelled';
 export type PassTier = {
   id: string;
   label: string;
-  /** FCFA (XOF), multiple de 5 (contrainte CinetPay) */
+  /** FCFA (XOF), multiple de 5 (Mobile Money) */
   price: number;
   /** places couvertes par un pass */
   seats: number;

@@ -1,5 +1,7 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Logger, Param, Post, Req, UnauthorizedException, type RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { OrdersService, type CreateOrderInput } from './orders.service.js';
+import { verifyGeniusWebhook } from '../payments/geniuspay.provider.js';
 
 @Controller('orders')
 export class OrdersController {
@@ -20,24 +22,36 @@ export class OrdersController {
 
 @Controller('payments')
 export class PaymentsController {
+  private readonly log = new Logger('Payments');
   constructor(private readonly orders: OrdersService) {}
 
   /**
-   * Webhook CinetPay (application/x-www-form-urlencoded, champ cpm_trans_id).
-   * On ne lit que la référence : le statut est TOUJOURS revérifié auprès de
-   * CinetPay avant de valider quoi que ce soit.
+   * Webhook GeniusPay (JSON : { event, data: { reference, metadata } }).
+   * On ne lit que les identifiants : le statut est TOUJOURS revérifié auprès
+   * de GeniusPay (montant compris) avant de valider quoi que ce soit.
    */
-  @Post('cinetpay/notify')
+  @Post('geniuspay/webhook')
   @HttpCode(200)
-  async notify(@Body() body: Record<string, string>) {
-    const ref = body?.cpm_trans_id;
-    if (typeof ref === 'string' && ref) await this.orders.handleNotification(ref);
-    return { ok: true };
-  }
-
-  /** CinetPay fait aussi un GET de contrôle sur l'URL de notification. */
-  @Get('cinetpay/notify')
-  ping() {
+  async webhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Body() body: { event?: string; data?: { reference?: unknown; metadata?: { order_id?: unknown } } },
+    @Headers('x-webhook-signature') signature?: string,
+    @Headers('x-webhook-timestamp') timestamp?: string,
+  ) {
+    const secret = process.env.GENIUSPAY_WEBHOOK_SECRET;
+    if (secret) {
+      const raw = req.rawBody?.toString('utf8') ?? JSON.stringify(body);
+      if (!verifyGeniusWebhook(secret, signature, timestamp, raw) && !verifyGeniusWebhook(secret, signature, timestamp, JSON.stringify(body))) {
+        this.log.warn(`webhook rejeté (signature invalide) : ${body?.event ?? '?'}`);
+        throw new UnauthorizedException('Signature invalide.');
+      }
+    }
+    const orderId = body?.data?.metadata?.order_id;
+    const ref = body?.data?.reference;
+    await this.orders.handleNotification({
+      orderId: typeof orderId === 'string' ? orderId : undefined,
+      providerRef: typeof ref === 'string' ? ref : undefined,
+    });
     return { ok: true };
   }
 

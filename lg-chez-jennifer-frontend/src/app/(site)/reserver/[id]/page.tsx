@@ -36,7 +36,7 @@ export default async function ReserverPage({ params }: PageProps<"/reserver/[id]
 
         <header className="mt-8 grid items-center gap-8 md:grid-cols-[auto_1fr] [&>*]:min-w-0">
           <div className="relative aspect-square w-32 overflow-hidden rounded-[1.4rem] border border-line sm:w-40" data-reveal="scale">
-            <Image src={event.cover} unoptimized={event.cover.startsWith("http")} alt="" fill sizes="160px" className="object-cover" />
+            <Image src={event.cover} unoptimized={event.cover.startsWith("http")} alt="" fill loading="eager" sizes="160px" className="object-cover" />
             <div className="absolute left-2.5 top-2.5 flex flex-col items-center rounded-lg bg-cream px-2.5 py-1 text-cacao">
               <span className="t-display text-xl font-semibold leading-none">{day}</span>
               <span className="text-[0.55rem] font-bold tracking-[0.16em]">{month}</span>

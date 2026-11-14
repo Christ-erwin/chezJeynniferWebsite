@@ -9,8 +9,8 @@ import { LockIcon } from "@/components/icons";
 
 /**
  * Simulateur de paiement (développement uniquement — le backend ne l'active
- * que si CinetPay n'est pas configuré). En production, le client est envoyé
- * sur le vrai guichet CinetPay où il valide avec Wave ou Orange Money.
+ * que si GeniusPay n'est pas configuré). En production, le client est envoyé
+ * sur le vrai guichet GeniusPay où il valide avec Wave ou Orange Money.
  */
 export default function SimulationPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = use(params);

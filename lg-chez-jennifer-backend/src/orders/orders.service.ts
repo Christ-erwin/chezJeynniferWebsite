@@ -111,7 +111,7 @@ export class OrdersService {
   async get(id: string): Promise<PublicOrder> {
     let order = this.store.get(id);
     if (!order) throw new NotFoundException('Commande introuvable.');
-    if (order.status === 'pending' && order.provider === 'cinetpay') {
+    if (order.status === 'pending' && order.provider === 'geniuspay') {
       const last = this.lastCheck.get(id) ?? 0;
       if (Date.now() - last > CHECK_EVERY_MS) {
         this.lastCheck.set(id, Date.now());
@@ -125,9 +125,12 @@ export class OrdersService {
   }
 
   /** Webhook : on retrouve la commande par sa référence et on relit le statut. */
-  async handleNotification(reference: string) {
-    const order = this.store.findByReference(reference);
-    if (order) await this.applyCheck(order);
+  /** Webhook de l'agrégateur : retrouve la commande puis relit son statut à la source. */
+  async handleNotification(ids: { orderId?: string; providerRef?: string }) {
+    const order =
+      (ids.orderId ? this.store.get(ids.orderId) : undefined) ??
+      (ids.providerRef ? this.store.all().find((o) => o.providerRef === ids.providerRef) : undefined);
+    if (order && order.status === 'pending' && order.provider === this.provider.name) await this.applyCheck(order);
   }
 
   /** Simulateur local uniquement. */

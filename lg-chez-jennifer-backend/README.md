@@ -12,7 +12,7 @@ product → event_instance → ticket_tier → order → payment / ticket).
 - Catalogue produits + instances d'événement (dates, lieu, capacité)
 - Réservation de tickets + gestion du stock restant par tarif (transactions atomiques)
 - Persistance : acheteurs, commandes, tickets vendus
-- Intégration paiement Mobile Money via agrégateur (**CinetPay** ou **PayDunya**)
+- Intégration paiement Mobile Money via agrégateur (**GeniusPay**)
   - Init de paiement, endpoint **webhook** de confirmation, vérification de statut
   - Rappel : pas d'intégration opérateur par opérateur (Wave Business direct exige RCCM + DFE)
 - Émission des tickets (QR / référence) après paiement confirmé
@@ -30,13 +30,13 @@ Le rendu des pages / la galerie → voir `../lg-chez-jennifer-frontend`.
 ## Billetterie (en place)
 - `GET /api/events`, `GET /api/events/:id` — éditions publiées et à venir (sans l'adresse exacte), avec `remaining`.
 - `POST /api/orders` — crée une commande : prix relus côté serveur (édition en base), capacité vérifiée (pas de survente, places bloquées 20 min), numéro ivoirien normalisé. Renvoie l'URL de paiement.
-- `GET /api/orders/:id` — statut (+ billets et adresse une fois payé). Revérifie le statut auprès de CinetPay.
-- `POST /api/payments/cinetpay/notify` — webhook CinetPay ; le statut est TOUJOURS relu via l'API CinetPay avant validation (montant contrôlé).
+- `GET /api/orders/:id` — statut (+ billets et adresse une fois payé). Revérifie le statut auprès de GeniusPay.
+- `POST /api/payments/geniuspay/webhook` — webhook GeniusPay (signature HMAC vérifiée si `GENIUSPAY_WEBHOOK_SECRET`) ; le statut est TOUJOURS relu via l'API GeniusPay avant validation (montant contrôlé).
 - `POST /api/payments/mock/:id/confirm` — simulateur local.
 
 ### Paiement Wave + Orange Money
 - Sans clés → **simulateur** (aucun argent réel), refusé en production.
-- Avec `CINETPAY_API_KEY` + `CINETPAY_SITE_ID` (dashboard CinetPay) → vrai guichet Mobile Money. Renseigner aussi `PUBLIC_API_URL` (joignable depuis Internet, pour le webhook) et `FRONTEND_URL`.
+- Avec `GENIUSPAY_PUBLIC_KEY` + `GENIUSPAY_SECRET_KEY` (dashboard GeniusPay) → vrai guichet Mobile Money (clés `sandbox` pour tester). Déclarer le webhook `<PUBLIC_API_URL>/payments/geniuspay/webhook` chez GeniusPay et copier son secret dans `GENIUSPAY_WEBHOOK_SECRET`. Renseigner aussi `FRONTEND_URL` (retour du client après paiement).
 
 ## Espace admin (`/api/admin/*`)
 Authentification : `POST /api/admin/auth/login` `{ password }` → jeton signé (12 h) à passer en `Authorization: Bearer …`. 5 essais / 10 min par IP.

@@ -5,7 +5,7 @@ Deux projets **indépendants**, deux déploiements :
 | Dossier | Rôle | Stack |
 |---|---|---|
 | [`lg-chez-jennifer-frontend/`](lg-chez-jennifer-frontend/) | Site vitrine public : présentation de l'événement, galerie photos, tunnel d'achat de tickets | Next.js 16 (App Router) + Tailwind v4 |
-| [`lg-chez-jennifer-backend/`](lg-chez-jennifer-backend/) | API billetterie : réservation, stock, acheteurs, intégration paiement Mobile Money (CinetPay / PayDunya), webhooks | NestJS 12 (ESM) |
+| [`lg-chez-jennifer-backend/`](lg-chez-jennifer-backend/) | API billetterie : réservation, stock, acheteurs, intégration paiement Mobile Money (GeniusPay), webhooks | NestJS 12 (ESM) |
 
 ## Comment ils sont reliés
 

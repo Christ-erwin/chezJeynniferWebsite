@@ -130,7 +130,7 @@ export type AdminOrder = {
   createdAt: string;
   updatedAt: string;
   paidAt?: string;
-  provider: "mock" | "cinetpay" | "manual";
+  provider: "mock" | "geniuspay" | "manual";
   tickets: AdminTicket[];
   history?: { at: string; action: string }[];
 };

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { dataPath } from '../common/data-path.js';
 
 const TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MAX_BYTES = 1.5 * 1024 * 1024;
@@ -13,7 +14,7 @@ const MAX_BYTES = 1.5 * 1024 * 1024;
  */
 @Injectable()
 export class MediaService {
-  readonly dir = resolve(process.env.MEDIA_DIR ?? 'data/media');
+  readonly dir = resolve(process.env.MEDIA_DIR ?? dataPath('media'));
 
   save(dataUrl: unknown): { path: string } {
     const m = typeof dataUrl === 'string' ? /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl) : null;

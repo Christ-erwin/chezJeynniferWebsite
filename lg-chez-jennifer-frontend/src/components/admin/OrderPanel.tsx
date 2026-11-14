@@ -38,7 +38,7 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={ORDER_STATUS[o.status].tone}>{ORDER_STATUS[o.status].label}</Badge>
           <span className="text-sm text-paper-muted">
-            {METHOD_LABEL[o.paymentMethod]} · {o.provider === "manual" ? "saisie admin" : o.provider === "cinetpay" ? "CinetPay" : "simulateur"}
+            {METHOD_LABEL[o.paymentMethod]} · {o.provider === "manual" ? "saisie admin" : o.provider === "geniuspay" ? "GeniusPay" : "simulateur"}
           </span>
         </div>
 

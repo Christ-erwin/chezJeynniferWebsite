@@ -27,7 +27,7 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   paidAt?: string;
-  provider: 'mock' | 'cinetpay' | 'manual';
+  provider: 'mock' | 'geniuspay' | 'manual';
   providerRef?: string;
   tickets: Ticket[];
   /** trace des actions faites depuis l'admin */

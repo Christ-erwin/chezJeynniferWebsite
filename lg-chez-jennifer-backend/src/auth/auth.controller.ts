@@ -8,8 +8,10 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  login(@Body() body: { password?: unknown }, @Req() req: { ip?: string; headers: Record<string, string | undefined> }) {
-    const ip = (req.headers['x-forwarded-for']?.split(',')[0] ?? req.ip ?? 'inconnue').trim();
+  login(@Body() body: { password?: unknown }, @Req() req: { ip?: string }) {
+    // req.ip tient compte de « trust proxy » (main.ts) : on ne lit pas
+    // X-Forwarded-For à la main, le client pourrait le falsifier.
+    const ip = req.ip ?? 'inconnue';
     return this.auth.login(body?.password, ip);
   }
 

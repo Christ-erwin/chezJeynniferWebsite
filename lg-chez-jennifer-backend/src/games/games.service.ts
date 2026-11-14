@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { JsonCollection } from '../common/json-collection.js';
+import { dataPath } from '../common/data-path.js';
 import { ROLE_IDS, WINNERS, type Game, type GameState, type Player, type RoleId, type ScreenGame, type Winner } from './game.types.js';
 
 const MAX_PLAYERS = 40;
@@ -14,7 +15,7 @@ function cleanPhoto(v: unknown): string | undefined {
 
 @Injectable()
 export class GamesService {
-  private readonly store = new JsonCollection<Game>(process.env.GAMES_FILE ?? 'data/games.json');
+  private readonly store = new JsonCollection<Game>(process.env.GAMES_FILE ?? dataPath('games.json'));
 
   list() {
     return this.store

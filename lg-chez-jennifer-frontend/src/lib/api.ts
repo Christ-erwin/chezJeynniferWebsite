@@ -83,7 +83,7 @@ export type Order = {
 
 export type CreateOrderResponse = {
   order: Order;
-  payment: { provider: "mock" | "cinetpay"; url: string };
+  payment: { provider: "mock" | "geniuspay"; url: string };
 };
 
 export function createOrder(input: CreateOrderInput) {
