@@ -77,10 +77,16 @@ export class GeniusPayProvider implements PaymentProvider {
 
     const res = await fetch(`${BASE}/payments`, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) });
     const json = (await res.json().catch(() => ({}))) as GeniusResponse<GeniusPayment>;
-    // direct → payment_url (Wave / Orange Money) ; page GeniusPay → checkout_url
-    const url = method ? json.data?.payment_url : (json.data?.checkout_url ?? json.data?.payment_url);
+    // direct → payment_url (Wave / Orange Money) ; page GeniusPay → checkout_url.
+    // En sandbox, le mode direct peut répondre 201 sans lien : on prend alors
+    // checkout_url s'il est fourni, sinon repli (voir init).
+    const url = method ? (json.data?.payment_url ?? json.data?.checkout_url) : (json.data?.checkout_url ?? json.data?.payment_url);
     if (!res.ok || !url || !json.data?.reference) {
-      this.log.error(`init refusé (${res.status}) : ${json.error?.code ?? ''} ${json.error?.message ?? json.message ?? ''}`);
+      const why = res.ok
+        ? `pas de lien de paiement dans la réponse (champs : ${Object.keys(json.data ?? {}).join(', ') || 'aucun'})`
+        : `${json.error?.code ?? ''} ${json.error?.message ?? json.message ?? ''}`;
+      // l'échec du mode direct n'est qu'un avertissement : le repli prend le relais
+      this.log[method ? 'warn' : 'error'](`init ${method ?? 'checkout'} refusé (${res.status}) : ${why}`);
       throw new Error('Le paiement n’a pas pu être initialisé. Réessaie dans un instant.');
     }
     return { url, providerRef: json.data.reference };
