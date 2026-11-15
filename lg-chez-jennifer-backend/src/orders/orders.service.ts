@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { EventsService } from '../events/events.service.js';
-import { GENDERS, type EventRecord, type Gender, type GenderQuota, type PublicEvent } from '../events/event.types.js';
+import { GENDERS, styleGender, type EventRecord, type Gender, type GenderQuota, type PublicEvent } from '../events/event.types.js';
 import { MailService } from '../mail/mail.service.js';
 import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment.provider.js';
 import { OrdersStore } from './orders.store.js';
@@ -129,6 +129,13 @@ export class OrdersService {
     const buyer = this.parseBuyer(input.buyer, true);
     const packs = this.parsePacks(event, items, input.packs, true);
     const participants = this.parseParticipants(event, items, input.participants, true);
+    // modèle réservé à un sexe (ex. « Crop top (fille) ») : doit correspondre à la place
+    packs?.forEach((p, i) => {
+      const only = styleGender(p.style);
+      const g = participants?.[i]?.gender;
+      if (only && g && only !== g)
+        throw new BadRequestException(`« ${p.style} » est réservé aux ${only === 'fille' ? 'filles' : 'garçons'} (place ${i + 1}).`);
+    });
     const method = input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money') throw new BadRequestException('Choisis Wave ou Orange Money.');
     if (input.imageConsent !== true)

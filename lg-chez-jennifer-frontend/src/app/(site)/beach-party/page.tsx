@@ -80,7 +80,7 @@ const FAQ = [
     q: "Est-ce que je serai filmé·e ?",
     a: "L'aventure est filmée pour TikTok, Instagram et YouTube, et tu en es informé·e avant. Les interviews et les portraits ne sont utilisés qu'avec ton accord explicite, et si tu préfères rester hors champ, une solution est prévue.",
   },
-  { q: "C'est quoi, le pack personnalisé ?", a: "Chaque participant qui achète son billet en ligne reçoit un pack Les Soirées chez Jeynnifer : t-shirt noir pour les garçons, crop top noir pour les filles." },
+  { q: "C'est quoi, le pack personnalisé ?", a: "Chaque participant qui achète son billet en ligne reçoit un pack Les Soirées chez Jeynnifer : t-shirt noir pour les garçons ; t-shirt noir ou crop top noir, au choix, pour les filles." },
 ];
 
 export default async function BeachPartyPage() {
@@ -248,11 +248,11 @@ export default async function BeachPartyPage() {
               ))}
             </ul>
             <p className="mt-6 max-w-lg text-sm text-paper-muted" data-reveal>
-              Le pack personnalisé Les Soirées chez Jeynnifer : un t-shirt noir pour les garçons, un crop top noir pour les filles, offert à chaque participant qui réserve en ligne.
+              Le pack personnalisé Les Soirées chez Jeynnifer : un t-shirt noir pour les garçons, un t-shirt ou un crop top noir au choix pour les filles, offert à chaque participant qui réserve en ligne.
             </p>
           </div>
           <div className="relative mx-auto aspect-[9/16] w-full max-w-[380px] rotate-2 overflow-hidden rounded-[1.4rem] border border-line-strong shadow-[0_40px_80px_-30px_rgba(0,0,0,0.9)]" data-reveal="scale">
-            <Image src="/images/bp-affiche-pack.jpg" alt="Le pack personnalisé : t-shirt noir pour les garçons, crop top noir pour les filles" fill sizes="380px" className="object-cover" />
+            <Image src="/images/bp-affiche-pack.jpg" alt="Le pack personnalisé : t-shirt noir, et crop top noir au choix pour les filles" fill sizes="380px" className="object-cover" />
           </div>
         </div>
       </section>

@@ -17,6 +17,16 @@ export type PassTier = {
 /** Pack offert à chaque participant : modèle et taille choisis à la réservation, pour chaque place. */
 export type EventPack = { label: string; styles: string[]; sizes: string[] };
 
+/**
+ * Modèle réservé à un sexe : nom terminé par « (fille) » ou « (garçon) ».
+ * Ex. « Crop top noir (fille) » → filles seulement ; « T-shirt noir » → tout le monde.
+ */
+export function styleGender(style: string): 'fille' | 'garcon' | undefined {
+  if (/\(\s*filles?\s*\)/i.test(style)) return 'fille';
+  if (/\(\s*gar[cç]ons?\s*\)/i.test(style)) return 'garcon';
+  return undefined;
+}
+
 export const GENDERS = ['fille', 'garcon'] as const;
 export type Gender = (typeof GENDERS)[number];
 

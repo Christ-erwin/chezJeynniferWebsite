@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee } from "@/lib/catalog";
+import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee, stylesFor } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/components/PaymentBadges";
 import { CheckIcon, LockIcon, MinusIcon, PlusIcon } from "@/components/icons";
@@ -86,11 +86,13 @@ export function BookingForm({ event }: { event: EventEdition }) {
       next[i] = { ...(next[i] ?? { name: "", gender: "" }), ...patch };
       return next;
     });
-    // pré-choisit le modèle du pack qui correspond (ex. « Crop top (fille) »)
-    if (patch.gender && pack && !packs[i]?.style) {
-      const word = patch.gender === "fille" ? "fille" : "garçon";
-      const style = pack.styles.find((s) => s.toLowerCase().includes(word));
-      if (style) setPack(i, { style });
+    // modèles du pack selon le sexe (ex. « Crop top (fille) ») : on retire un
+    // modèle devenu interdit, et on choisit d'office s'il n'en reste qu'un
+    if (patch.gender && pack) {
+      const allowed = stylesFor(pack.styles, patch.gender);
+      const current = packs[i]?.style;
+      if (allowed.length === 1) setPack(i, { style: allowed[0] });
+      else if (current && !allowed.includes(current)) setPack(i, { style: "" });
     }
   };
   const chosen = (g: Gender) => seatPeople.filter((p) => p.gender === g).length;
@@ -110,6 +112,8 @@ export function BookingForm({ event }: { event: EventEdition }) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Adresse e-mail invalide.";
     if (!method) e.method = "Choisis Wave ou Orange Money.";
     if (pack && seatPacks.some((p) => !p.style || !p.size)) e.packs = `Choisis le modèle et la taille pour ${seats > 1 ? "chaque place" : "ton pack"}.`;
+    else if (pack && seatPacks.some((p, i) => !stylesFor(pack.styles, seatPeople[i]?.gender).includes(p.style)))
+      e.packs = "Ce modèle n'est pas proposé pour ce choix fille / garçon : choisis-en un autre.";
     if (genders) {
       if (seatPeople.some((p) => !p.gender)) e.people = `Indique fille ou garçon pour ${seats > 1 ? "chaque place" : "ta place"}.`;
       for (const g of ["fille", "garcon"] as const) {
@@ -171,11 +175,6 @@ export function BookingForm({ event }: { event: EventEdition }) {
         <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
           <legend className="sr-only">Tes passes</legend>
           <StepTitle n={1} title="Tes passes" />
-          {event.remaining <= 10 && (
-            <p className="mt-3 text-sm font-semibold text-ember">
-              Plus que {event.remaining} place{event.remaining > 1 ? "s" : ""} pour cette soirée.
-            </p>
-          )}
           <ul className="mt-6 space-y-3">
             {event.tiers.map((t) => {
               const n = qty[t.id] ?? 0;
@@ -286,7 +285,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
                           tabIndex={-1}
                           aria-invalid={!!show("packs") && (!p.style || !p.size)}
                         >
-                          {pack.styles.map((s) => (
+                          {stylesFor(pack.styles, who?.gender).map((s) => (
                             <Chip key={s} active={p.style === s} onClick={() => setPack(i, { style: s })}>
                               {s}
                             </Chip>

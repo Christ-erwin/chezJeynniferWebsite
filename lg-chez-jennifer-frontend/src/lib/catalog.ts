@@ -212,3 +212,19 @@ export function paymentFee(subtotal: number, rule: { percent: number; fixed: num
   if (!rule || subtotal <= 0) return 0;
   return Math.ceil((subtotal + rule.fixed) / (1 - rule.percent / 100) / 100) * 100 - subtotal;
 }
+
+/**
+ * Modèle de pack réservé à un sexe : nom terminé par « (fille) » ou « (garçon) »
+ * (même règle que le backend). Ex. « Crop top noir (fille) » → filles seulement,
+ * « T-shirt noir » → tout le monde.
+ */
+export function styleGender(style: string): Gender | undefined {
+  if (/\(\s*filles?\s*\)/i.test(style)) return "fille";
+  if (/\(\s*gar[cç]ons?\s*\)/i.test(style)) return "garcon";
+  return undefined;
+}
+
+/** Modèles proposés pour une place (tous si le sexe n'est pas encore choisi). */
+export function stylesFor(styles: string[], gender: Gender | "" | undefined): string[] {
+  return gender ? styles.filter((s) => !styleGender(s) || styleGender(s) === gender) : styles;
+}

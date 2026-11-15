@@ -94,7 +94,7 @@ export const BEACH_PARTY_NOEL_2026 =(base: Pick<EventRecord, 'status' | 'created
   cover: '/images/bp-affiche-noel.jpg',
   capacity: 32,
   salesOpenAt: '2026-11-16T10:00:00+00:00',
-  pack: { label: 'Pack personnalisé', styles: ['T-shirt noir (garçon)', 'Crop top noir (fille)'], sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+  pack: { label: 'Pack personnalisé', styles: ['T-shirt noir', 'Crop top noir (fille)'], sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
   // 16 filles + 16 garçons, répartis au paiement en 4 équipes de 4 filles + 4 garçons
   genders: { fille: 16, garcon: 16 },
   teams: BEACH_TEAMS,
@@ -116,5 +116,5 @@ export const BEACH_PARTY_NOEL_2026 =(base: Pick<EventRecord, 'status' | 'created
       ],
     },
   ],
-  note: 'Départ d’Abidjan en car le samedi à 10h, retour le dimanche après 10h. Nuit sur place. Pack offert : t-shirt noir (garçons) ou crop top noir (filles).',
+  note: 'Départ d’Abidjan en car le samedi à 10h, retour le dimanche après 10h. Nuit sur place. Pack offert : t-shirt noir, ou crop top noir au choix pour les filles.',
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -12,7 +13,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * avant le premier rendu, pour éviter tout flash.)
  */
 export function SmoothScroll() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    // le navigateur ne doit pas rouvrir la page à l'ancienne position (rechargement, retour)
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     gsap.registerPlugin(ScrollTrigger);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
@@ -46,6 +51,15 @@ export function SmoothScroll() {
       lenis.destroy();
     };
   }, []);
+
+  // chaque page s'ouvre en haut (Lenis garderait sinon la position de la page
+  // précédente) ; sauf lien vers une ancre (#billetterie…)
+  useEffect(() => {
+    if (location.hash) return;
+    const lenis = (window as unknown as { __lenis?: Lenis }).__lenis;
+    lenis?.scrollTo(0, { immediate: true, force: true });
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return null;
 }

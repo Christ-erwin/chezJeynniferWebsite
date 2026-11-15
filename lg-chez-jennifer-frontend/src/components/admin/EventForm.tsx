@@ -41,7 +41,7 @@ function toDraft(e?: AdminEvent) {
     salesTime: e?.salesOpenAt?.slice(11, 16) ?? "10:00",
     packOn: !!e?.pack,
     packLabel: e?.pack?.label ?? "Pack personnalisé",
-    packStyles: e?.pack?.styles.join("\n") ?? "T-shirt noir (garçon)\nCrop top noir (fille)",
+    packStyles: e?.pack?.styles.join("\n") ?? "T-shirt noir\nCrop top noir (fille)",
     packSizes: e?.pack?.sizes.join(", ") ?? "XS, S, M, L, XL, XXL",
     gendersOn: !!e?.genders,
     girls: String(e?.genders?.fille ?? Math.floor((e?.capacity ?? 60) / 2)),
@@ -210,7 +210,7 @@ export function EventForm({ event }: { event?: AdminEvent }) {
               <Field label="Tailles" hint="Séparées par des virgules.">
                 {(id) => <Input id={id} value={d.packSizes} onChange={(e) => set("packSizes", e.target.value)} placeholder="S, M, L, XL" />}
               </Field>
-              <Field label="Modèles" hint="Un par ligne." className="sm:col-span-2">
+              <Field label="Modèles" hint="Un par ligne. Termine par « (fille) » ou « (garçon) » pour réserver un modèle à ce sexe, ex. « Crop top noir (fille) »." className="sm:col-span-2">
                 {(id) => <Textarea id={id} rows={3} value={d.packStyles} onChange={(e) => set("packStyles", e.target.value)} />}
               </Field>
             </div>
