@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee, stylesFor } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
-import { PAYMENT_METHODS } from "@/components/PaymentBadges";
+import { PAYMENT_METHODS, PaymentLogo } from "@/components/PaymentBadges";
 import { CheckIcon, LockIcon, MinusIcon, PlusIcon } from "@/components/icons";
 
 /** Même règle que le backend : numéro ivoirien à 10 chiffres. */
@@ -380,9 +380,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
                     active ? "border-transparent bg-paper text-cacao shadow-[0_14px_40px_-16px_rgba(227,9,43,0.5)]" : "border-line hover:border-line-strong"
                   }`}
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-black" style={{ background: m.color, color: m.ink }}>
-                    {m.id === "wave" ? "W" : "OM"}
-                  </span>
+                  <PaymentLogo id={m.id} size={48} className="rounded-xl" />
                   <span>
                     <span className={`block text-lg font-bold ${active ? "text-cacao" : "text-paper"}`}>{m.name}</span>
                     <span className={`block text-xs ${active ? "text-cacao-muted" : "text-paper-dim"}`}>{m.hint}</span>
