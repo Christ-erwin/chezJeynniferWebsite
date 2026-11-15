@@ -9,6 +9,7 @@ import { dateParts, formatPrice, isLightColor } from "@/lib/catalog";
 import { whatsappLink } from "@/lib/site";
 import { PassButton, GhostButton, Logo } from "@/components/ui";
 import { CheckIcon, PinIcon, CalendarIcon, WhatsappIcon } from "@/components/icons";
+import { saveImage, ticketsImage } from "@/lib/ticket-image";
 
 const POLL_MS = 3000;
 const POLL_MAX = 100; // ~5 min
@@ -58,6 +59,35 @@ export function Confirmation({ orderId }: { orderId: string }) {
       { scale: 1, autoAlpha: 0, duration: 1.6, stagger: 0.03, ease: "expo.out", x: () => gsap.utils.random(-260, 260), y: () => gsap.utils.random(-220, 60) },
     );
   }, [order?.status]);
+
+  // image des billets préparée à l'avance : sur iPhone, le menu de partage
+  // doit s'ouvrir tout de suite au clic, sans calcul entre les deux
+  const ticketsRef = useRef<HTMLDivElement>(null);
+  const [image, setImage] = useState<Blob | null>(null);
+  const [saving, setSaving] = useState(false);
+  const paidOrder = order?.status === "paid" ? order : null;
+  useEffect(() => {
+    if (!paidOrder) return;
+    let alive = true;
+    const svgs = [...(ticketsRef.current?.querySelectorAll<SVGSVGElement>("svg.cf-qr") ?? [])].map((s) => new XMLSerializer().serializeToString(s));
+    ticketsImage(paidOrder, svgs, dateParts(paidOrder.eventDate).long)
+      .then((b) => alive && setImage(b))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [paidOrder]);
+
+  async function saveTickets() {
+    if (!paidOrder) return;
+    setSaving(true);
+    try {
+      const blob = image ?? (await ticketsImage(paidOrder, [...(ticketsRef.current?.querySelectorAll<SVGSVGElement>("svg.cf-qr") ?? [])].map((s) => new XMLSerializer().serializeToString(s)), dateParts(paidOrder.eventDate).long));
+      await saveImage(blob, `billets-${paidOrder.reference}.png`, `Billets ${paidOrder.eventTitle}`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (error && !order) {
     return (
@@ -143,7 +173,7 @@ export function Confirmation({ orderId }: { orderId: string }) {
         )}
       </div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-2">
+      <div ref={ticketsRef} className="mt-12 grid gap-6 sm:grid-cols-2">
         {order.tickets.map((t, i) => (
           <article key={t.code} className="cf-ticket relative overflow-hidden rounded-[1.4rem] bg-cream text-cacao">
             {t.team && (
@@ -175,15 +205,19 @@ export function Confirmation({ orderId }: { orderId: string }) {
                 {t.pack && <p className="mt-1 text-sm text-cacao-muted">Pack : {t.pack.style} · {t.pack.size}</p>}
                 <p className="mt-2 font-mono text-sm">{t.code}</p>
               </div>
-              <QRCodeSVG value={t.code} size={96} bgColor="transparent" fgColor="#2b1a14" level="M" />
+              <QRCodeSVG className="cf-qr" value={t.code} size={96} bgColor="#ffffff" fgColor="#2b1a14" level="M" marginSize={1} />
             </div>
           </article>
         ))}
       </div>
 
       <div className="mt-12 flex flex-col justify-center gap-3 sm:flex-row print:hidden">
-        <button onClick={() => window.print()} className="inline-flex items-center justify-center rounded-full bg-brand px-7 py-3.5 font-semibold text-white">
-          Imprimer / enregistrer en PDF
+        <button onClick={saveTickets} disabled={saving} className="inline-flex items-center justify-center rounded-full bg-brand px-7 py-3.5 font-semibold text-white disabled:opacity-70">
+          {saving ? "Préparation…" : `Enregistrer ${order.tickets.length > 1 ? "mes billets" : "mon billet"} (image)`}
+        </button>
+        {/* impression : seulement sur ordinateur (ignorée par la plupart des navigateurs mobiles) */}
+        <button onClick={() => window.print()} className="hidden items-center justify-center rounded-full border border-paper/30 px-7 py-3.5 font-semibold text-paper hover:border-peach hover:text-peach pointer-fine:inline-flex">
+          Imprimer
         </button>
         <a href={whatsappLink(`Bonjour ! J'ai réservé (${order.reference}) pour ${order.eventTitle}.`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-paper/30 px-7 py-3.5 font-semibold text-paper hover:border-peach hover:text-peach">
           <WhatsappIcon className="h-4 w-4" /> Une question ?
