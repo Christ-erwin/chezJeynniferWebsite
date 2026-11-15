@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/components/PaymentBadges";
@@ -39,6 +39,29 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // commande envoyée chez l'opérateur : sur téléphone, le lien ouvre l'appli
+  // Wave / Orange Money et cette page reste derrière, sans être redirigée
+  const [paying, setPaying] = useState<string | null>(null);
+  const confirmUrl = paying ? `/reserver/confirmation/${paying}` : null;
+
+  useEffect(() => {
+    if (!confirmUrl) return;
+    let left = false;
+    // retour sur le navigateur après l'appli de paiement → page de confirmation
+    // (elle vérifie le statut du paiement et affiche les billets)
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") left = true;
+      else if (left) window.location.assign(confirmUrl);
+    };
+    // page restaurée depuis le cache du navigateur (bouton retour)
+    const onPageShow = (e: PageTransitionEvent) => e.persisted && window.location.assign(confirmUrl);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [confirmUrl]);
 
   const seats = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.seats, 0);
   const subtotal = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.price, 0);
@@ -131,6 +154,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
       } catch {
         /* navigation privée */
       }
+      setPaying(res.order.id);
       window.location.assign(res.payment.url);
     } catch (err) {
       setServerError((err as Error).message);
@@ -452,7 +476,8 @@ export function BookingForm({ event }: { event: EventEdition }) {
           >
             {submitting ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream/30 border-t-cream" /> Préparation du paiement…
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream/30 border-t-cream" />{" "}
+                {paying ? "Paiement en cours…" : "Préparation du paiement…"}
               </>
             ) : (
               <>
@@ -460,6 +485,14 @@ export function BookingForm({ event }: { event: EventEdition }) {
               </>
             )}
           </button>
+          {confirmUrl && (
+            <a
+              href={confirmUrl}
+              className="mt-3 flex w-full items-center justify-center rounded-full border border-cacao px-6 py-3.5 text-[0.95rem] font-semibold text-cacao transition-colors hover:bg-cacao hover:text-cream"
+            >
+              J&apos;ai payé : voir mes billets
+            </a>
+          )}
           <p className="mt-4 text-center text-xs leading-relaxed text-cacao-muted">
             Tu valides le paiement sur ton téléphone. Ton billet s&apos;affiche dès la confirmation{teams ? ", avec ton équipe" : ""} et t&apos;est envoyé par e-mail.
           </p>
