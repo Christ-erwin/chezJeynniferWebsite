@@ -145,7 +145,17 @@ export type AdminOrder = {
   emailedAt?: string;
   /** droit à l'image accepté en ligne (case cochée avant paiement) */
   imageConsentAt?: string;
+  /** édition supprimée : commande annulée à ce moment-là */
+  eventDeletedAt?: string;
+  /** remboursement à faire (doneAt = fait) */
+  refund?: { amount: number; doneAt?: string };
   history?: { at: string; action: string }[];
+};
+
+export type DeletionImpact = {
+  paid: { id: string; reference: string; buyer: { name: string; phone: string; email?: string }; paymentMethod: AdminPaymentMethod; provider: AdminOrder["provider"]; seats: number; total: number }[];
+  refundTotal: number;
+  pending: number;
 };
 
 export type Stats = {
@@ -212,7 +222,11 @@ export const adminApi = {
   createEvent: (e: EventInput) => json<AdminEvent>("/events", { method: "POST", body: JSON.stringify(e) }),
   updateEvent: (id: string, e: EventInput) =>
     json<AdminEvent>(`/events/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(e) }),
-  deleteEvent: (id: string) => json<void>(`/events/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  /** commandes touchées par la suppression d'une édition */
+  deletionImpact: (id: string) => json<DeletionImpact>(`/events/${encodeURIComponent(id)}/deletion-impact`),
+  /** force : annule les commandes (payées → « à rembourser ») puis supprime */
+  deleteEvent: (id: string, force = false) =>
+    json<void>(`/events/${encodeURIComponent(id)}${force ? "?force=1" : ""}`, { method: "DELETE" }),
 
   orders: (f: OrderFilter = {}) => json<AdminOrder[]>(`/orders${qs(f)}`),
   createManualOrder: (input: {
@@ -229,6 +243,7 @@ export const adminApi = {
   markPaid: (id: string) => json<AdminOrder>(`/orders/${encodeURIComponent(id)}/mark-paid`, { method: "POST" }),
   setOrderPacks: (id: string, packs: PackChoice[]) =>
     json<AdminOrder>(`/orders/${encodeURIComponent(id)}/packs`, { method: "PUT", body: JSON.stringify({ packs }) }),
+  markRefunded: (id: string) => json<AdminOrder>(`/orders/${encodeURIComponent(id)}/refunded`, { method: "POST" }),
   cancelOrder: (id: string) => json<AdminOrder>(`/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
   async exportCsv(f: OrderFilter = {}) {
     const res = await request(`/orders/export.csv${qs(f)}`);

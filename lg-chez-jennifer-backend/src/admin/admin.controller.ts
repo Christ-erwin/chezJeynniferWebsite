@@ -50,10 +50,24 @@ export class AdminController {
     return this.events.update(id, body ?? {}, this.orders.soldTierIds(id), this.orders.seatsTaken(id), this.orders.seatsTakenByGender(id));
   }
 
+  /** Avant suppression : commandes payées (à rembourser) et en attente. */
+  @Get('events/:id/deletion-impact')
+  deletionImpact(@Param('id') id: string) {
+    this.events.require(id);
+    return this.orders.deletionImpact(id);
+  }
+
+  /**
+   * Supprime une édition. S'il y a des commandes, il faut confirmer (?force=1) :
+   * elles sont annulées et les payées marquées « à rembourser ».
+   */
   @Delete('events/:id')
   @HttpCode(204)
-  async deleteEvent(@Param('id') id: string) {
-    await this.events.remove(id, this.orders.hasOrders(id));
+  async deleteEvent(@Param('id') id: string, @Query('force') force?: string) {
+    this.events.require(id);
+    const confirmed = force === '1' || force === 'true';
+    if (confirmed) await this.orders.cancelForDeletedEvent(id);
+    await this.events.remove(id, !confirmed && this.orders.hasOrders(id));
   }
 
   /* ------------------------------ commandes ------------------------------ */
@@ -100,6 +114,12 @@ export class AdminController {
   @HttpCode(200)
   resendEmail(@Param('id') id: string) {
     return this.orders.resendEmail(id);
+  }
+
+  @Post('orders/:id/refunded')
+  @HttpCode(200)
+  markRefunded(@Param('id') id: string) {
+    return this.orders.markRefunded(id);
   }
 
   @Post('orders/:id/cancel')

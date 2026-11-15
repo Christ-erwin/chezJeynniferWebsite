@@ -182,6 +182,22 @@ export class OrdersService {
       (ids.orderId ? this.store.get(ids.orderId) : undefined) ??
       (ids.providerRef ? this.store.all().find((o) => o.providerRef === ids.providerRef) : undefined);
     if (order && order.status === 'pending' && order.provider === this.provider.name) await this.applyCheck(order);
+    // paiement arrivé après la suppression de l'édition : à rembourser
+    else if (order && order.eventDeletedAt && order.status === 'cancelled' && !order.refund && order.provider === this.provider.name) {
+      const result = await this.provider.check(order).catch(() => 'pending' as const);
+      if (result === 'paid')
+        await this.store.mutate(() => {
+          const cur = this.store.get(order.id)!;
+          const now = new Date().toISOString();
+          this.log.warn(`paiement reçu après suppression de l’édition : ${cur.reference}, remboursement à faire`);
+          this.store.set({
+            ...cur,
+            refund: { amount: cur.total },
+            updatedAt: now,
+            history: [...(cur.history ?? []), { at: now, action: `paiement reçu après suppression de l’édition : remboursement de ${cur.total} FCFA à faire` }],
+          });
+        });
+    }
   }
 
   /** Simulateur local uniquement. */
@@ -336,6 +352,76 @@ export class OrdersService {
       if (o.tickets.some((t) => t.usedAt)) throw new ConflictException('Un billet de cette commande a déjà été scanné à l’entrée.');
       const now = new Date().toISOString();
       const next: Order = { ...o, status: 'cancelled', updatedAt: now, history: [...(o.history ?? []), { at: now, action: `annulée (était : ${o.status})` }] };
+      this.store.set(next);
+      return next;
+    });
+  }
+
+  /* ====================== suppression d'une édition ====================== */
+  /** Ce que la suppression va toucher : commandes payées (à rembourser) et en attente. */
+  deletionImpact(eventId: string) {
+    this.expireStaleInMemory();
+    const os = this.store.all().filter((o) => o.eventId === eventId);
+    const paid = os.filter((o) => o.status === 'paid');
+    return {
+      paid: paid.map((o) => ({
+        id: o.id,
+        reference: o.reference,
+        buyer: o.buyer,
+        paymentMethod: o.paymentMethod,
+        provider: o.provider,
+        seats: seatsOf(o),
+        total: o.total,
+      })),
+      refundTotal: paid.reduce((s, o) => s + o.total, 0),
+      pending: os.filter((o) => o.status === 'pending').length,
+    };
+  }
+
+  /**
+   * Avant de supprimer une édition : annule toutes ses commandes. Les payées
+   * sont marquées « à rembourser » (montant payé par le client) et restent
+   * visibles dans l'admin pour suivre les remboursements.
+   */
+  cancelForDeletedEvent(eventId: string): Promise<number> {
+    return this.store.mutate(() => {
+      const now = new Date().toISOString();
+      let n = 0;
+      for (const o of this.store.all()) {
+        if (o.eventId !== eventId || o.eventDeletedAt) continue;
+        const wasPaid = o.status === 'paid';
+        const active = wasPaid || o.status === 'pending';
+        const next: Order = {
+          ...o,
+          eventDeletedAt: now,
+          ...(active ? { status: 'cancelled' as const } : {}),
+          ...(wasPaid ? { refund: { amount: o.total } } : {}),
+          updatedAt: now,
+          history: [
+            ...(o.history ?? []),
+            { at: now, action: wasPaid ? `édition supprimée : commande annulée, remboursement de ${o.total} FCFA à faire` : 'édition supprimée' },
+          ],
+        };
+        this.store.set(next);
+        if (wasPaid) n++;
+      }
+      return n;
+    });
+  }
+
+  /** Remboursement fait (hors site : Wave, Orange Money, espèces). */
+  markRefunded(id: string): Promise<Order> {
+    return this.store.mutate(() => {
+      const o = this.getAdmin(id);
+      if (!o.refund) throw new BadRequestException('Aucun remboursement à faire pour cette commande.');
+      if (o.refund.doneAt) return o;
+      const now = new Date().toISOString();
+      const next: Order = {
+        ...o,
+        refund: { ...o.refund, doneAt: now },
+        updatedAt: now,
+        history: [...(o.history ?? []), { at: now, action: `remboursement de ${o.refund.amount} FCFA effectué` }],
+      };
       this.store.set(next);
       return next;
     });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { adminApi, type AdminEvent, type EventInput, type EventStatus } from "@/lib/admin-api";
 import { CONCEPTS, type ConceptSlug } from "@/lib/catalog";
 import { Button, Card, ErrorNote, Field, Input, PlusIcon, Select, Textarea, TrashIcon } from "./ui";
+import { DeleteEventDialog } from "./DeleteEventDialog";
 
 /** Visuels déjà présents dans /public/images (ou une URL https). */
 const COVERS = [
@@ -72,6 +73,7 @@ export function EventForm({ event }: { event?: AdminEvent }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const sold = new Set(event?.soldTierIds ?? []);
 
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => {
@@ -134,17 +136,6 @@ export function EventForm({ event }: { event?: AdminEvent }) {
     }
   }
 
-  async function remove() {
-    if (!event || !confirm(`Supprimer définitivement « ${event.title} » ?`)) return;
-    setBusy(true);
-    try {
-      await adminApi.deleteEvent(event.id);
-      router.replace("/admin/evenements");
-    } catch (err) {
-      setError((err as Error).message);
-      setBusy(false);
-    }
-  }
 
   return (
     <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -297,7 +288,7 @@ export function EventForm({ event }: { event?: AdminEvent }) {
             {busy ? "Enregistrement…" : event ? "Enregistrer" : "Créer l'édition"}
           </Button>
           {event && (
-            <Button variant="danger" size="sm" className="w-full" disabled={busy} onClick={remove}>
+            <Button variant="danger" size="sm" className="w-full" disabled={busy} onClick={() => setDeleting(true)}>
               <TrashIcon /> Supprimer
             </Button>
           )}
@@ -328,6 +319,9 @@ export function EventForm({ event }: { event?: AdminEvent }) {
           </Field>
         </Card>
       </aside>
+      {event && deleting && (
+        <DeleteEventDialog event={event} onClose={() => setDeleting(false)} onDeleted={() => router.replace("/admin/evenements")} />
+      )}
     </form>
   );
 }

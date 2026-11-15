@@ -140,7 +140,7 @@ function Orders() {
                   <td className="col-span-2 text-paper-muted md:px-3 md:py-3.5">{o.eventTitle}</td>
                   <td className="row-start-1 text-right font-semibold tabular-nums text-paper md:px-3 md:py-3.5">{fcfa(o.total)}</td>
                   <td className="text-paper-muted md:px-3 md:py-3.5">{METHOD_LABEL[o.paymentMethod]}{o.provider === "manual" && <span className="text-paper-dim"> · admin</span>}</td>
-                  <td className="text-right md:px-3 md:py-3.5 md:text-left"><Badge tone={ORDER_STATUS[o.status].tone}>{ORDER_STATUS[o.status].label}</Badge></td>
+                  <td className="text-right md:px-3 md:py-3.5 md:text-left"><Badge tone={ORDER_STATUS[o.status].tone}>{ORDER_STATUS[o.status].label}</Badge>{o.refund && !o.refund.doneAt && <span className="ml-1.5"><Badge tone="warn">À rembourser</Badge></span>}</td>
                   <td className="hidden whitespace-nowrap text-right text-xs text-paper-dim md:table-cell md:px-5 md:py-3.5">{dateTime(o.createdAt)}</td>
                 </tr>
               ))}

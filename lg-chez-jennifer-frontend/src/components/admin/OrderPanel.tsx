@@ -32,6 +32,19 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
     }
   }
 
+  async function refunded() {
+    if (!o.refund || !confirm(`Confirmer que ${fcfa(o.refund.amount)} ont bien été remboursés à ${o.buyer.name} ?`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onChanged(await adminApi.markRefunded(o.id));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function act(kind: "paid" | "cancel") {
     const msg =
       kind === "paid"
@@ -54,10 +67,30 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={ORDER_STATUS[o.status].tone}>{ORDER_STATUS[o.status].label}</Badge>
+          {o.refund && <Badge tone={o.refund.doneAt ? "ok" : "warn"}>{o.refund.doneAt ? "Remboursée" : "À rembourser"}</Badge>}
           <span className="text-sm text-paper-muted">
             {METHOD_LABEL[o.paymentMethod]} · {o.provider === "manual" ? "saisie admin" : o.provider === "geniuspay" ? "GeniusPay" : "simulateur"}
           </span>
         </div>
+
+        {o.refund && (
+          <div className={`rounded-2xl border p-4 text-sm ${o.refund.doneAt ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100" : "border-amber-400/40 bg-amber-400/10 text-amber-100"}`}>
+            <p className="font-semibold">
+              {o.refund.doneAt ? `Remboursement de ${fcfa(o.refund.amount)} fait le ${dateTime(o.refund.doneAt)}.` : `Remboursement à faire : ${fcfa(o.refund.amount)}`}
+            </p>
+            {!o.refund.doneAt && (
+              <>
+                <p className="mt-1 opacity-80">
+                  {o.eventDeletedAt ? `L'édition a été supprimée le ${dateTime(o.eventDeletedAt)}. ` : ""}
+                  Rembourse le client par {METHOD_LABEL[o.paymentMethod]} au {o.buyer.phone}, puis valide ci-dessous.
+                </p>
+                <Button size="sm" variant="primary" className="mt-3" disabled={busy} onClick={refunded}>
+                  <CheckIcon /> Marquer comme remboursé
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         <Section title="Client">
           <p className="font-semibold text-paper">{o.buyer.name}</p>

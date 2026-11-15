@@ -51,6 +51,10 @@ export type Order = {
   tickets: Ticket[];
   /** billets envoyés par e-mail */
   emailedAt?: string;
+  /** édition supprimée : la commande a été annulée à ce moment-là */
+  eventDeletedAt?: string;
+  /** remboursement à faire au client (commande payée d'une édition supprimée) ; doneAt = remboursé */
+  refund?: { amount: number; doneAt?: string };
   /** droit à l'image accepté par l'acheteur (pour lui et sa réservation), case cochée avant paiement */
   imageConsentAt?: string;
   /** trace des actions faites depuis l'admin */
