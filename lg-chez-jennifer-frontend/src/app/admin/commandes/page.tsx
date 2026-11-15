@@ -16,6 +16,8 @@ export default function AdminOrdersPage() {
   );
 }
 
+const PAGE = 50;
+
 function Orders() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -33,9 +35,14 @@ function Orders() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const filter = { eventId, status, q: qLive };
+  // par défaut, on masque les paiements abandonnés (expirés, échoués) : ce sont les plus nombreux
+  const filter = { eventId, status: status === "" ? "active" : status === "all" ? "" : status, q: qLive };
+  // affichage par pages de PAGE commandes (« Afficher plus »), remis à zéro quand les filtres changent
+  const filterKey = JSON.stringify(filter);
+  const [shown, setShown] = useState({ key: filterKey, n: PAGE });
+  if (shown.key !== filterKey) setShown({ key: filterKey, n: PAGE });
   const events = useLoad(adminApi.events);
-  const orders = useLoad(() => adminApi.orders(filter), JSON.stringify(filter));
+  const orders = useLoad(() => adminApi.orders(filter), filterKey);
 
   const setParam = (k: string, v: string | null) => {
     const p = new URLSearchParams(sp.toString());
@@ -94,7 +101,9 @@ function Orders() {
         <label>
           <span className="sr-only">Statut</span>
           <Select value={status} onChange={(e) => setParam("status", e.target.value || null)}>
-            <option value="">Tous les statuts</option>
+            <option value="">Sans les abandonnées</option>
+            <option value="all">Toutes (abandonnées comprises)</option>
+            <option value="refund">À rembourser</option>
             {(Object.keys(ORDER_STATUS) as AdminOrderStatus[]).map((s) => <option key={s} value={s}>{ORDER_STATUS[s].label}</option>)}
           </Select>
         </label>
@@ -122,7 +131,7 @@ function Orders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {list.map((o) => (
+              {list.slice(0, shown.n).map((o) => (
                 <tr
                   key={o.id}
                   onClick={() => setParam("o", o.id)}
@@ -146,6 +155,13 @@ function Orders() {
               ))}
             </tbody>
           </table>
+        )}
+        {list.length > shown.n && (
+          <div className="border-t border-line p-4 text-center">
+            <Button size="sm" onClick={() => setShown({ key: filterKey, n: shown.n + PAGE })}>
+              Afficher plus · {list.length - shown.n} restante{list.length - shown.n > 1 ? "s" : ""}
+            </Button>
+          </div>
         )}
       </Card>
 

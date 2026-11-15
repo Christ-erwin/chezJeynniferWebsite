@@ -62,7 +62,7 @@ const INCLUDED = [
 const POSTERS = [
   { src: "/images/bp-affiche-noel.jpg", alt: "Affiche : Les Soirées chez Jeynnifer, Spéciale Noël à Assinie" },
   { src: "/images/bp-affiche-infos.jpg", alt: "Affiche : 12 → 13 décembre 2026, 60 000 FCFA par personne, 30 places" },
-  { src: "/images/bp-affiche-enfance.jpg", alt: "Affiche : Retour en enfance, les jeux de notre enfance" },
+  { src: "/images/bp-affiche-enfance.JPG", alt: "Affiche : Retour en enfance, les jeux de notre enfance" },
   { src: "/images/bp-affiche-feu.jpg", alt: "Affiche : le fameux Loup-Garou et le cinéma en plein air" },
   { src: "/images/bp-affiche-pack.jpg", alt: "Affiche : le pack personnalisé, t-shirt et crop top" },
 ];

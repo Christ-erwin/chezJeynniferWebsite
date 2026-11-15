@@ -216,7 +216,16 @@ export class OrdersService {
     return this.store
       .all()
       .filter((o) => !filter.eventId || o.eventId === filter.eventId)
-      .filter((o) => !filter.status || o.status === filter.status)
+      // « active » : sans les paiements abandonnés (expirés, échoués) ; « refund » : remboursements à faire
+      .filter((o) =>
+        !filter.status
+          ? true
+          : filter.status === 'active'
+            ? o.status !== 'expired' && o.status !== 'failed'
+            : filter.status === 'refund'
+              ? !!o.refund && !o.refund.doneAt
+              : o.status === filter.status,
+      )
       .filter(
         (o) =>
           !q ||

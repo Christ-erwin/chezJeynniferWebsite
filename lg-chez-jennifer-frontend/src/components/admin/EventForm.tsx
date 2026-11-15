@@ -13,7 +13,7 @@ const COVERS = [
   "ev-halloween.jpg", "ev-gn.jpg", "ev-cine.jpg", "lg-scene.jpg", "lg-moon.jpg", "lg-group.png", "lg-cards.png",
   "gn-table.jpg", "gn-friends.jpg", "gn-jenga.jpg", "gn-drinks.jpg", "gn-boxes.jpg",
   "cine-garden.jpg", "cine-wide.jpg", "cine-popcorn.jpg", "cine-small.jpg",
-  "bp-affiche-noel.jpg", "bp-sunset.jpg", "bp-feu.jpg", "bp-billets.jpg", "bp-affiche-enfance.jpg", "bp-affiche-infos.jpg",
+  "bp-affiche-noel.jpg", "bp-sunset.jpg", "bp-feu.jpg", "bp-billets.jpg", "bp-affiche-enfance.JPG", "bp-affiche-infos.jpg",
 ].map((n) => `/images/${n}`);
 
 type TierDraft = { key: string; id?: string; label: string; price: string; seats: string; description: string; perks: string };
