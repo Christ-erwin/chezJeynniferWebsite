@@ -18,13 +18,15 @@ export class MailService {
   private readonly log = new Logger('Mail');
   private readonly apiKey = process.env.RESEND_API_KEY;
   private readonly from = process.env.MAIL_FROM ?? 'Les Soirées chez Jeynnifer <billets@chezjeynnifer.online>';
-  private readonly replyTo = process.env.MAIL_REPLY_TO;
+  /** ignorée si ce n'est pas une adresse valide (« a@b.c » ou « Nom <a@b.c> ») : un mauvais réglage ne doit pas bloquer l'envoi */
+  private readonly replyTo = validAddress(process.env.MAIL_REPLY_TO);
   private readonly site = (process.env.FRONTEND_URL ?? 'http://localhost:3000').replace(/\/$/, '');
   /** numéro WhatsApp de contact (chiffres seuls), le même que sur le site */
   private readonly whatsapp = (process.env.WHATSAPP_NUMBER ?? '2250787879780').replace(/\D/g, '');
 
   constructor() {
     if (!this.apiKey) this.log.warn('RESEND_API_KEY absent : les billets ne sont pas envoyés par e-mail.');
+    if (process.env.MAIL_REPLY_TO && !this.replyTo) this.log.warn(`MAIL_REPLY_TO ignoré (adresse invalide) : « ${process.env.MAIL_REPLY_TO} »`);
   }
 
   get enabled(): boolean {
@@ -67,4 +69,13 @@ export class MailService {
     this.log.log(`billets envoyés à ${order.buyer.email} (${order.reference})`);
     return true;
   }
+}
+
+const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+/** « a@b.c » ou « Nom <a@b.c> », sinon undefined. */
+export function validAddress(raw: string | undefined): string | undefined {
+  const v = raw?.trim();
+  if (!v) return undefined;
+  const m = /^[^<>]*<([^<>]+)>$/.exec(v);
+  return EMAIL.test(m ? m[1].trim() : v) ? v : undefined;
 }

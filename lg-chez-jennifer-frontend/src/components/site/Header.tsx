@@ -13,18 +13,41 @@ export function Header() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
+    // Position bornée à [0, max] : le rebond élastique d'iOS (scrollY négatif
+    // ou au-delà du bas de page) ne doit pas être pris pour un changement de sens.
+    const pos = () => {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      return Math.min(Math.max(window.scrollY, 0), max);
+    };
+    let last = pos();
+    let anchor = last; // position où le sens de défilement a changé
+    let dir = 0;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = pos();
       setScrolled(y > 30);
-      // se cache en descendant, revient dès qu'on remonte
-      setHidden(y > 400 && y > last + 4);
-      if (y < last - 4) setHidden(false);
+      const d = Math.sign(y - last);
+      if (d !== 0 && d !== dir) {
+        dir = d;
+        anchor = last;
+      }
+      // se cache après 40 px de descente, revient après 40 px de remontée :
+      // les petits à-coups du doigt sur mobile ne le font plus clignoter
+      if (y < 400) setHidden(false);
+      else if (dir > 0 && y - anchor > 40) setHidden(true);
+      else if (dir < 0 && anchor - y > 40) setHidden(false);
       last = y;
     };
-    onScroll();
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   // referme le menu mobile quand la route change (ajustement au rendu, sans effet)
