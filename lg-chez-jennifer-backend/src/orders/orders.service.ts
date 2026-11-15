@@ -375,6 +375,8 @@ export class OrdersService {
       })),
       refundTotal: paid.reduce((s, o) => s + o.total, 0),
       pending: os.filter((o) => o.status === 'pending').length,
+      /** toutes les commandes de l'édition (annulées, expirées… comprises) */
+      total: os.length,
     };
   }
 

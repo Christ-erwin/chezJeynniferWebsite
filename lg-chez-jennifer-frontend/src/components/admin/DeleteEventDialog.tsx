@@ -21,12 +21,14 @@ export function DeleteEventDialog({ event, onClose, onDeleted }: { event: AdminE
   }, [event.id]);
 
   const hasOrders = !!impact && (impact.paid.length > 0 || impact.pending > 0);
+  // commandes passées (annulées, expirées) : gardées dans l'historique, suppression confirmée quand même
+  const pastOrders = impact ? impact.total - impact.paid.length - impact.pending : 0;
 
   async function confirm() {
     setBusy(true);
     setError(null);
     try {
-      await adminApi.deleteEvent(event.id, hasOrders);
+      await adminApi.deleteEvent(event.id, !!impact && impact.total > 0);
       onDeleted();
     } catch (e) {
       setError((e as Error).message);
@@ -38,7 +40,14 @@ export function DeleteEventDialog({ event, onClose, onDeleted }: { event: AdminE
     <Overlay title={`Supprimer « ${event.title} » ?`} onClose={onClose}>
       {!impact && !error && <Skeleton className="h-24" />}
 
-      {impact && !hasOrders && <p className="text-sm text-paper-muted">Aucune commande pour cette édition. Elle sera supprimée définitivement.</p>}
+      {impact && !hasOrders && (
+        <p className="text-sm text-paper-muted">
+          {pastOrders > 0
+            ? `Aucune commande payée ni en attente. ${pastOrders} ancienne${pastOrders > 1 ? "s" : ""} commande${pastOrders > 1 ? "s" : ""} (annulée${pastOrders > 1 ? "s" : ""} ou expirée${pastOrders > 1 ? "s" : ""}) reste${pastOrders > 1 ? "nt" : ""} dans l'historique.`
+            : "Aucune commande pour cette édition."}{" "}
+          Elle sera supprimée définitivement.
+        </p>
+      )}
 
       {impact && hasOrders && (
         <div className="space-y-4">

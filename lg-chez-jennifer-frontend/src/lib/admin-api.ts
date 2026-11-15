@@ -156,6 +156,8 @@ export type DeletionImpact = {
   paid: { id: string; reference: string; buyer: { name: string; phone: string; email?: string }; paymentMethod: AdminPaymentMethod; provider: AdminOrder["provider"]; seats: number; total: number }[];
   refundTotal: number;
   pending: number;
+  /** toutes les commandes de l'édition (annulées, expirées… comprises) */
+  total: number;
 };
 
 export type Stats = {
