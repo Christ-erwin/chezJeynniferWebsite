@@ -2,10 +2,10 @@ import type { Order } from "@/lib/api";
 import { isLightColor } from "@/lib/catalog";
 
 /**
- * Image PNG des billets (un bloc par billet : équipe, soirée, date, lieu,
- * titulaire, code, QR code), à enregistrer dans la galerie du téléphone.
- * Remplace window.print(), ignoré par la plupart des navigateurs mobiles
- * (et par les navigateurs intégrés de WhatsApp, Instagram, Facebook…).
+ * Billets en PDF (une page par billet) ou en image PNG : équipe, soirée,
+ * date, lieu, titulaire, code, QR code. Remplace window.print(), ignoré par
+ * la plupart des navigateurs mobiles (et par les navigateurs intégrés de
+ * WhatsApp, Instagram, Facebook…).
  *
  * qrSvgs : le balisage SVG des QR codes déjà affichés sur la page, dans
  * l'ordre des billets.
@@ -50,6 +50,17 @@ function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): str
   return `${t}…`;
 }
 
+type Assets = { logo: HTMLImageElement | null; qrs: (HTMLImageElement | null)[] };
+
+async function loadAssets(qrSvgs: string[]): Promise<Assets> {
+  const [logo, qrs] = await Promise.all([
+    loadImage("/brand/logo-dark.png").catch(() => null),
+    Promise.all(qrSvgs.map((s) => loadImage(svgUrl(s)).catch(() => null))),
+  ]);
+  return { logo, qrs };
+}
+
+/** Image : tous les billets les uns sous les autres (pour la galerie photo). */
 export async function ticketsImage(order: Order, qrSvgs: string[], when: string): Promise<Blob> {
   const n = order.tickets.length;
   const canvas = document.createElement("canvas");
@@ -59,15 +70,55 @@ export async function ticketsImage(order: Order, qrSvgs: string[], when: string)
 
   ctx.fillStyle = "#0b0b0c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const assets = await loadAssets(qrSvgs);
+  order.tickets.forEach((_, i) => drawTicket(ctx, order, i, PAD + i * (CARD_H + GAP), when, assets));
+  drawFooter(ctx, order, canvas.height - PAD - 10);
 
-  const logo = await loadImage("/brand/logo-dark.png").catch(() => null);
-  const qrs = await Promise.all(qrSvgs.map((s) => loadImage(svgUrl(s)).catch(() => null)));
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("image"))), "image/png"));
+}
+
+/** PDF : une page par billet (à partager, enregistrer dans Fichiers ou imprimer). */
+export async function ticketsPdf(order: Order, qrSvgs: string[], when: string): Promise<Blob> {
+  const { jsPDF } = await import("jspdf");
+  const assets = await loadAssets(qrSvgs);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = PAD * 2 + CARD_H + 70;
+  const ctx = canvas.getContext("2d")!;
+  // page au format du billet : 120 mm de large, hauteur proportionnelle
+  const pw = 120;
+  const ph = (pw * canvas.height) / canvas.width;
+  // jsPDF intervertit largeur et hauteur si l'orientation ne correspond pas au format
+  const orientation = pw > ph ? "landscape" : "portrait";
+  const pdf = new jsPDF({ orientation, unit: "mm", format: [pw, ph], compress: true });
+  pdf.setProperties({ title: `Billets ${order.eventTitle} · ${order.reference}`, author: "Les Soirées chez Jeynnifer" });
+
+  order.tickets.forEach((_, i) => {
+    ctx.fillStyle = "#0b0b0c";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawTicket(ctx, order, i, PAD, when, assets);
+    drawFooter(ctx, order, canvas.height - PAD - 10);
+    if (i > 0) pdf.addPage([pw, ph], orientation);
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, pw, ph, undefined, "FAST");
+  });
+  return pdf.output("blob");
+}
+
+function drawFooter(ctx: CanvasRenderingContext2D, order: Order, y: number) {
+  ctx.fillStyle = "#8b857e";
+  ctx.font = `400 28px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.fillText(`Commande ${order.reference} · présente un QR code par personne à l'entrée`, W / 2, y);
+  ctx.textAlign = "left";
+}
+
+function drawTicket(ctx: CanvasRenderingContext2D, order: Order, i: number, y: number, when: string, { logo, qrs }: Assets) {
+  const t = order.tickets[i];
+  const n = order.tickets.length;
   const title = order.eventTitle.replace(" chez Jeynnifer", "");
   const place = order.venue ? (order.venue.address ?? [order.venue.name, order.venue.city].filter(Boolean).join(", ")) : "";
-
-  order.tickets.forEach((t, i) => {
+  {
     const x = PAD;
-    const y = PAD + i * (CARD_H + GAP);
     const w = W - PAD * 2;
 
     ctx.save();
@@ -147,22 +198,15 @@ export async function ticketsImage(order: Order, qrSvgs: string[], when: string)
       ctx.fill();
       ctx.drawImage(qr, qrX, cut + 36, qrSize, qrSize);
     }
-  });
-
-  ctx.fillStyle = "#8b857e";
-  ctx.font = `400 28px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.fillText(`Commande ${order.reference} · présente un QR code par personne à l'entrée`, W / 2, canvas.height - PAD - 10);
-
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("image"))), "image/png"));
+  }
 }
 
 /**
  * Propose d'enregistrer l'image : menu de partage du téléphone (« Enregistrer
  * l'image », WhatsApp…) quand il existe, sinon téléchargement classique.
  */
-export async function saveImage(blob: Blob, filename: string, title: string): Promise<void> {
-  const file = new File([blob], filename, { type: "image/png" });
+export async function saveFile(blob: Blob, filename: string, title: string): Promise<void> {
+  const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
   if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title });

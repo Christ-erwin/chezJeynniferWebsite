@@ -9,7 +9,7 @@ import { dateParts, formatPrice, isLightColor } from "@/lib/catalog";
 import { whatsappLink } from "@/lib/site";
 import { PassButton, GhostButton, Logo } from "@/components/ui";
 import { CheckIcon, PinIcon, CalendarIcon, WhatsappIcon } from "@/components/icons";
-import { saveImage, ticketsImage } from "@/lib/ticket-image";
+import { saveFile, ticketsImage, ticketsPdf } from "@/lib/ticket-image";
 
 const POLL_MS = 3000;
 const POLL_MAX = 100; // ~5 min
@@ -63,29 +63,33 @@ export function Confirmation({ orderId }: { orderId: string }) {
   // image des billets préparée à l'avance : sur iPhone, le menu de partage
   // doit s'ouvrir tout de suite au clic, sans calcul entre les deux
   const ticketsRef = useRef<HTMLDivElement>(null);
-  const [image, setImage] = useState<Blob | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [files, setFiles] = useState<{ pdf?: Blob; png?: Blob }>({});
+  const [saving, setSaving] = useState<"pdf" | "png" | null>(null);
   const paidOrder = order?.status === "paid" ? order : null;
+  const make = (kind: "pdf" | "png", o: Order) => {
+    const svgs = [...(ticketsRef.current?.querySelectorAll<SVGSVGElement>("svg.cf-qr") ?? [])].map((s) => new XMLSerializer().serializeToString(s));
+    return (kind === "pdf" ? ticketsPdf : ticketsImage)(o, svgs, dateParts(o.eventDate).long);
+  };
   useEffect(() => {
     if (!paidOrder) return;
     let alive = true;
-    const svgs = [...(ticketsRef.current?.querySelectorAll<SVGSVGElement>("svg.cf-qr") ?? [])].map((s) => new XMLSerializer().serializeToString(s));
-    ticketsImage(paidOrder, svgs, dateParts(paidOrder.eventDate).long)
-      .then((b) => alive && setImage(b))
-      .catch(() => {});
+    for (const kind of ["pdf", "png"] as const)
+      make(kind, paidOrder)
+        .then((b) => alive && setFiles((f) => ({ ...f, [kind]: b })))
+        .catch(() => {});
     return () => {
       alive = false;
     };
   }, [paidOrder]);
 
-  async function saveTickets() {
+  async function saveTickets(kind: "pdf" | "png") {
     if (!paidOrder) return;
-    setSaving(true);
+    setSaving(kind);
     try {
-      const blob = image ?? (await ticketsImage(paidOrder, [...(ticketsRef.current?.querySelectorAll<SVGSVGElement>("svg.cf-qr") ?? [])].map((s) => new XMLSerializer().serializeToString(s)), dateParts(paidOrder.eventDate).long));
-      await saveImage(blob, `billets-${paidOrder.reference}.png`, `Billets ${paidOrder.eventTitle}`);
+      const blob = files[kind] ?? (await make(kind, paidOrder));
+      await saveFile(blob, `billets-${paidOrder.reference}.${kind}`, `Billets ${paidOrder.eventTitle}`);
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }
 
@@ -212,8 +216,11 @@ export function Confirmation({ orderId }: { orderId: string }) {
       </div>
 
       <div className="mt-12 flex flex-col justify-center gap-3 sm:flex-row print:hidden">
-        <button onClick={saveTickets} disabled={saving} className="inline-flex items-center justify-center rounded-full bg-brand px-7 py-3.5 font-semibold text-white disabled:opacity-70">
-          {saving ? "Préparation…" : `Enregistrer ${order.tickets.length > 1 ? "mes billets" : "mon billet"} (image)`}
+        <button onClick={() => saveTickets("pdf")} disabled={!!saving} className="inline-flex items-center justify-center rounded-full bg-brand px-7 py-3.5 font-semibold text-white disabled:opacity-70">
+          {saving === "pdf" ? "Préparation…" : `Télécharger ${order.tickets.length > 1 ? "mes billets" : "mon billet"} (PDF)`}
+        </button>
+        <button onClick={() => saveTickets("png")} disabled={!!saving} className="inline-flex items-center justify-center rounded-full border border-paper/30 px-7 py-3.5 font-semibold text-paper hover:border-peach hover:text-peach disabled:opacity-70">
+          {saving === "png" ? "Préparation…" : "Enregistrer en image"}
         </button>
         {/* impression : seulement sur ordinateur (ignorée par la plupart des navigateurs mobiles) */}
         <button onClick={() => window.print()} className="hidden items-center justify-center rounded-full border border-paper/30 px-7 py-3.5 font-semibold text-paper hover:border-peach hover:text-peach pointer-fine:inline-flex">
