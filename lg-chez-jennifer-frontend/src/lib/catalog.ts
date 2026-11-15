@@ -92,7 +92,7 @@ export const CONCEPTS: Concept[] = [
     accent: "#ff9a52",
     href: "/beach-party",
     cover: "/images/bp-sunset.jpg",
-    gallery: ["/images/bp-feu.jpg", "/images/bp-billets.jpg", "/images/bp-affiche-enfance.JPG"],
+    gallery: ["/images/bp-feu.jpg", "/images/bp-billets.jpg", "/images/bp-affiche-enfance.jpg"],
   },
 ];
 
