@@ -135,6 +135,12 @@ export function Confirmation({ orderId }: { orderId: string }) {
         <p className="mx-auto mt-4 max-w-lg text-paper-muted">
           Chaque QR code est une entrée{order.buyer.email ? <> : tes billets te sont aussi envoyés à <strong className="text-paper">{order.buyer.email}</strong></> : <> : garde cette page ou fais une capture</>}. Commande {order.reference} · {formatPrice(order.total)}.
         </p>
+        {order.buyer.email && (
+          <p className="mx-auto mt-3 max-w-lg text-sm text-paper-dim">
+            Pas reçu d&apos;ici quelques minutes ? Regarde dans l&apos;onglet <strong className="text-paper-muted">Promotions</strong> ou dans les{" "}
+            <strong className="text-paper-muted">Spams</strong>, et déplace-le dans ta boîte principale.
+          </p>
+        )}
       </div>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2">

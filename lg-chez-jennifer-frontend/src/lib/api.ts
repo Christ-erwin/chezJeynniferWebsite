@@ -61,6 +61,8 @@ export type CreateOrderInput = {
   packs?: { style: string; size: string }[];
   /** une entrée par place (éditions avec quotas filles / garçons ou équipes) */
   participants?: { name?: string; gender?: Gender }[];
+  /** droit à l'image accepté (case obligatoire avant paiement) */
+  imageConsent: true;
 };
 
 export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "expired";

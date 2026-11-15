@@ -38,7 +38,7 @@ export class MailService {
     if (!this.apiKey || !order.buyer.email || order.status !== 'paid' || order.tickets.length === 0) return false;
     const mail = ticketEmail(order, event, {
       tickets: `${this.site}/reserver/confirmation/${order.id}`,
-      logo: `${this.site}/brand/logo-light.png`,
+      logo: `${this.site}/brand/logo-dark.png`,
       whatsapp: `https://wa.me/${this.whatsapp}?text=${encodeURIComponent(`Bonjour ! Une question sur ma commande ${order.reference}.`)}`,
     });
     const attachments = await Promise.all(

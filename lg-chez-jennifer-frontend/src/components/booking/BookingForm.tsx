@@ -30,6 +30,8 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [method, setMethod] = useState<PaymentMethod | null>(null);
+  // droit à l'image : la soirée est filmée, accord obligatoire avant de payer
+  const [consent, setConsent] = useState(false);
   // pack offert : un choix (modèle + taille) par place, gardé même si on retire puis remet une place
   const [packs, setPacks] = useState<PackChoice[]>([]);
   // participants : sexe (quotas filles / garçons) et nom, un par place
@@ -91,8 +93,9 @@ export function BookingForm({ event }: { event: EventEdition }) {
       }
     }
     if (askPeople && seatPeople.some((p, i) => i > 0 && p.name.trim().length < 2)) e.names = "Indique le nom de chaque personne.";
+    if (!consent) e.consent = "Coche la case pour continuer : la soirée est filmée et photographiée.";
     return e;
-  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks, genders, askPeople, seatPeople, event.remainingByGender]);
+  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks, genders, askPeople, seatPeople, event.remainingByGender, consent]);
 
   const show = (k: string) => (touched[k] || touched.submit) && errors[k];
 
@@ -114,6 +117,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
         items: event.tiers.map((t) => ({ tierId: t.id, quantity: qty[t.id] ?? 0 })).filter((i) => i.quantity > 0),
         buyer: { name: name.trim(), phone, ...(email ? { email: email.trim() } : {}) },
         paymentMethod: method!,
+        imageConsent: true,
         ...(pack ? { packs: seatPacks } : {}),
         ...(askPeople
           ? { participants: seatPeople.map((p, i) => ({ ...(i > 0 ? { name: p.name.trim() } : {}), ...(p.gender ? { gender: p.gender } : {}) })) }
@@ -404,6 +408,27 @@ export function BookingForm({ event }: { event: EventEdition }) {
             </span>
             <span className="t-display text-4xl font-semibold tabular-nums">{formatPrice(total)}</span>
           </div>
+
+          <label className={`mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed transition-colors ${show("consent") ? "border-wine bg-wine/5" : "border-cacao-line"}`}>
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              aria-invalid={!!show("consent")}
+              aria-describedby="consent-error"
+              className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-wine"
+            />
+            <span>
+              <strong className="font-semibold">Droit à l&apos;image.</strong> La soirée est filmée et photographiée. J&apos;accepte, pour moi
+              {seats > 1 ? " et les personnes de ma réservation" : ""}, d&apos;apparaître sur ces images et qu&apos;elles soient publiées par Les
+              Soirées chez Jeynnifer (réseaux sociaux, site, vidéos).
+            </span>
+          </label>
+          {show("consent") && (
+            <p id="consent-error" className="mt-2 text-xs font-medium text-wine">
+              {errors.consent}
+            </p>
+          )}
 
           {serverError && (
             <p role="alert" className="mt-5 rounded-xl bg-wine/10 px-4 py-3 text-sm text-wine">

@@ -22,6 +22,8 @@ export type CreateOrderInput = {
   paymentMethod?: unknown;
   packs?: unknown;
   participants?: unknown;
+  /** case « droit à l'image » cochée (obligatoire en ligne : la soirée est filmée) */
+  imageConsent?: unknown;
 };
 
 const GENDER_LABEL: Record<Gender, string> = { fille: 'fille', garcon: 'garçon' };
@@ -123,8 +125,12 @@ export class OrdersService {
     const participants = this.parseParticipants(event, items, input.participants, true);
     const method = input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money') throw new BadRequestException('Choisis Wave ou Orange Money.');
+    if (input.imageConsent !== true)
+      throw new BadRequestException('Accepte le droit à l’image pour continuer : la soirée est filmée et photographiée.');
 
-    const order = await this.reserve(event, items, buyer, method, this.provider.name, packs, participants);
+    const order = await this.reserve(event, items, buyer, method, this.provider.name, packs, participants, {
+      imageConsentAt: new Date().toISOString(),
+    });
 
     try {
       const init = await this.provider.init(order);
@@ -389,7 +395,7 @@ export class OrdersService {
       const s = String(v ?? '');
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs', 'Participants'];
+    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs', 'Participants', 'Droit à l’image accepté le'];
     const rows = orders.map((o) => [
       o.reference,
       o.status,
@@ -409,6 +415,7 @@ export class OrdersService {
       o.tickets
         .map((t) => [t.holder, t.gender ? GENDER_LABEL[t.gender] : '', t.team ? `équipe ${t.team.name}` : ''].filter(Boolean).join(' · '))
         .join(' | '),
+      o.imageConsentAt ?? '',
     ]);
     // BOM + point-virgule : s'ouvre proprement dans Excel en français
     return '﻿' + [head, ...rows].map((r) => r.map(esc).join(';')).join('\n');
@@ -492,6 +499,7 @@ export class OrdersService {
     provider: Order['provider'],
     packs?: PackChoice[],
     participants?: Participant[],
+    extra?: Pick<Order, 'imageConsentAt'>,
   ): Promise<Order> {
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     return this.store.mutate(() => {
@@ -528,6 +536,7 @@ export class OrdersService {
         items,
         ...(packs ? { packs } : {}),
         ...(participants ? { participants } : {}),
+        ...extra,
         total: items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
         currency: 'XOF',
         createdAt: now,

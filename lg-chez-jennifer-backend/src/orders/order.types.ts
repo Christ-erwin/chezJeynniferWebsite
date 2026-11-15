@@ -48,6 +48,8 @@ export type Order = {
   tickets: Ticket[];
   /** billets envoyés par e-mail */
   emailedAt?: string;
+  /** droit à l'image accepté par l'acheteur (pour lui et sa réservation), case cochée avant paiement */
+  imageConsentAt?: string;
   /** trace des actions faites depuis l'admin */
   history?: { at: string; action: string }[];
 };

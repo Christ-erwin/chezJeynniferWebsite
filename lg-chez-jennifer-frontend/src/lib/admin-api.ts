@@ -140,6 +140,8 @@ export type AdminOrder = {
   provider: "mock" | "geniuspay" | "manual";
   tickets: AdminTicket[];
   emailedAt?: string;
+  /** droit à l'image accepté en ligne (case cochée avant paiement) */
+  imageConsentAt?: string;
   history?: { at: string; action: string }[];
 };
 

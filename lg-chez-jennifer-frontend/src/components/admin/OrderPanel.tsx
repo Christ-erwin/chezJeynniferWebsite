@@ -109,6 +109,12 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
           </ul>
         </Section>
 
+        <p className="text-xs text-paper-dim">
+          {o.imageConsentAt
+            ? `Droit à l'image accepté en ligne le ${dateTime(o.imageConsentAt)} (pour toute la réservation).`
+            : "Droit à l'image : pas d'accord enregistré (vente sur place ou ancienne commande)."}
+        </p>
+
         {error && <ErrorNote>{error}</ErrorNote>}
 
         {o.status === "paid" && (

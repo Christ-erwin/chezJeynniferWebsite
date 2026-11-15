@@ -62,19 +62,16 @@ export function ticketEmail(order: Order, event: EventRecord | undefined, links:
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f2ee">
     <tr><td align="center" style="padding:24px 12px">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
-        <tr><td align="center" style="background:#0b0b0c;border-radius:20px 20px 0 0;padding:28px 24px">
-          <img src="${esc(links.logo)}" width="200" alt="Les Soirées chez Jeynnifer" style="display:block;border:0;max-width:200px;height:auto" />
-        </td></tr>
-        <tr><td style="background:#ffffff;padding:28px 24px 8px;border-radius:0 0 20px 20px">
-          <p style="margin:0;color:#e3092b;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">Paiement confirmé</p>
-          <h1 style="margin:10px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.2;font-weight:400">À très vite, ${esc(first)} !</h1>
-          <p style="margin:14px 0 0;font-size:16px;line-height:1.55;color:#5c5652">
-            Voici ${n > 1 ? `tes <strong style="color:#141213">${n} billets</strong>` : 'ton <strong style="color:#141213">billet</strong>'} pour
-            <strong style="color:#141213">${esc(title)}</strong>. Présente ${n > 1 ? 'chaque' : 'le'} QR code à l'entrée${n > 1 ? ' : un code par personne' : ''}.
+        <tr><td style="background:#ffffff;padding:24px 24px 8px;border-radius:16px;border:1px solid #e6e1da">
+          <img src="${esc(links.logo)}" width="96" alt="Les Soirées chez Jeynnifer" style="display:block;border:0;max-width:96px;height:auto" />
+          <p style="margin:20px 0 0;color:#5c5652;font-size:13px">Commande ${esc(order.reference)} · paiement confirmé</p>
+          <h1 style="margin:6px 0 0;font-size:22px;line-height:1.3;font-weight:700">Bonjour ${esc(first)}, voici ${n > 1 ? 'tes billets' : 'ton billet'}</h1>
+          <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#141213">
+            ${n > 1 ? `${n} billets` : '1 billet'} pour <strong>${esc(title)}</strong>. Présente ${n > 1 ? 'chaque' : 'le'} QR code à l'entrée${n > 1 ? ' : un code par personne' : ''}.
           </p>
 
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 6px;background:#f5f2ee;border-radius:14px">
-            <tr><td style="padding:16px 18px;font-size:15px;line-height:1.6">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 6px;border-top:1px solid #e6e1da;border-bottom:1px solid #e6e1da">
+            <tr><td style="padding:14px 0;font-size:14px;line-height:1.7">
               <strong>Quand :</strong> ${esc(fmtDate(order.eventDate))}<br />
               ${venue ? `<strong>Où :</strong> ${esc(venue)}<br />` : ''}
               ${address ? `<strong>Adresse :</strong> ${esc(address)}<br />` : ''}
@@ -85,8 +82,8 @@ export function ticketEmail(order: Order, event: EventRecord | undefined, links:
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">${ticketBlocks}</table>
 
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td align="center" style="padding:8px 0 24px">
-              <a href="${esc(links.tickets)}" style="display:inline-block;background:#e3092b;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 26px;border-radius:999px">Voir mes billets en ligne</a>
+            <tr><td style="padding:4px 0 22px;font-size:14px;line-height:1.6;color:#5c5652">
+              Tes billets sont aussi disponibles en ligne : <a href="${esc(links.tickets)}" style="color:#e3092b;font-weight:700">voir mes billets</a>.
             </td></tr>
           </table>
         </td></tr>
@@ -118,7 +115,8 @@ export function ticketEmail(order: Order, event: EventRecord | undefined, links:
     .filter((l, i, a) => l !== '' || a[i - 1] !== '')
     .join('\n');
 
-  return { subject: `Tes billets · ${title}`, html, text };
+  // objet de reçu (référence + « confirmée ») : aide Gmail à classer l'e-mail en « Principale »
+  return { subject: `Commande ${order.reference} confirmée · ${n > 1 ? 'tes billets' : 'ton billet'} pour ${title}`, html, text };
 }
 
 /** Couleur claire (ex. jaune) : texte foncé par-dessus. */
