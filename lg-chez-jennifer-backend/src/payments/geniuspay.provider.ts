@@ -10,6 +10,9 @@ type GeniusPayment = {
   reference: string;
   amount: number | string;
   currency?: string;
+  fees?: number | string;
+  /** montant crédité au marchand (amount − fees) */
+  net_amount?: number | string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'expired' | 'cancelled' | 'refunded';
   checkout_url?: string;
   payment_url?: string;
@@ -105,6 +108,11 @@ export class GeniusPayProvider implements PaymentProvider {
         this.log.error(`montant incohérent pour ${order.reference} : ${p.amount} ${p.currency}`);
         return 'failed';
       }
+      // les frais répercutés doivent couvrir ceux de GeniusPay : sinon, ajuster PAYMENT_FEE_PERCENT / PAYMENT_FEE_FIXED
+      const net = Number(p.net_amount);
+      const tickets = order.total - (order.fee ?? 0);
+      if (Number.isFinite(net) && p.net_amount !== undefined && net < tickets)
+        this.log.warn(`net reçu ${net} < prix des billets ${tickets} pour ${order.reference} (frais GeniusPay ${p.fees}) : augmente PAYMENT_FEE_PERCENT`);
       return 'paid';
     }
     if (p.status === 'failed' || p.status === 'expired' || p.status === 'cancelled') return 'failed';

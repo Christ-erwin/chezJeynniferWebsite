@@ -82,10 +82,22 @@ export function OrderPanel({ order: o, onClose, onChanged }: { order: AdminOrder
                 <span className="tabular-nums text-paper">{fcfa(i.quantity * i.unitPrice)}</span>
               </li>
             ))}
+            {!!o.fee && (
+              <li className="flex justify-between text-sm">
+                <span className="text-paper-muted">Frais de paiement (pour GeniusPay)</span>
+                <span className="tabular-nums text-paper-muted">{fcfa(o.fee)}</span>
+              </li>
+            )}
             <li className="flex justify-between border-t border-line pt-2 font-semibold">
-              <span className="text-paper">Total</span>
+              <span className="text-paper">{o.fee ? "Payé par le client" : "Total"}</span>
               <span className="tabular-nums text-peach">{fcfa(o.total)}</span>
             </li>
+            {!!o.fee && (
+              <li className="flex justify-between text-xs text-paper-dim">
+                <span>Recette billets (ce qui te revient)</span>
+                <span className="tabular-nums">{fcfa(o.total - o.fee)}</span>
+              </li>
+            )}
           </ul>
         </Section>
 

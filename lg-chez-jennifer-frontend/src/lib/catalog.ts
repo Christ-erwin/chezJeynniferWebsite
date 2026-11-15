@@ -157,6 +157,8 @@ export type EventEdition = {
   genders?: GenderQuota;
   /** places restantes par sexe */
   remainingByGender?: GenderQuota;
+  /** frais de paiement ajoutés en ligne (voir paymentFee) */
+  paymentFee?: { percent: number; fixed: number };
   /** équipes tirées au sort au paiement */
   teams?: TeamDef[];
   /** calculé à la lecture (lib/events.ts) : la billetterie est-elle ouverte ? */
@@ -199,4 +201,14 @@ export function salesOpenLabel(iso: string): string {
 
 export function conceptNames(slugs: ConceptSlug[]): string {
   return slugs.map((s) => getConcept(s)?.name ?? s).join(" · ");
+}
+
+/**
+ * Frais de paiement à ajouter au prix des billets, pour que l'organisateur
+ * touche net le prix affiché (même calcul que le backend, orders/fees.ts) :
+ * payé = (prix + fixe) / (1 − taux), arrondi à la centaine supérieure.
+ */
+export function paymentFee(subtotal: number, rule: { percent: number; fixed: number } | undefined): number {
+  if (!rule || subtotal <= 0) return 0;
+  return Math.ceil((subtotal + rule.fixed) / (1 - rule.percent / 100) / 100) * 100 - subtotal;
 }

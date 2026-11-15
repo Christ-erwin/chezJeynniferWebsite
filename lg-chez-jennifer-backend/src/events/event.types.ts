@@ -58,4 +58,6 @@ export type PublicEvent = Omit<EventRecord, 'status' | 'createdAt' | 'updatedAt'
   remaining: number;
   /** places restantes par sexe (éditions avec quotas) */
   remainingByGender?: GenderQuota;
+  /** frais de paiement ajoutés en ligne (pour les afficher avant de payer) */
+  paymentFee?: { percent: number; fixed: number };
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice } from "@/lib/catalog";
+import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS } from "@/components/PaymentBadges";
 import { CheckIcon, LockIcon, MinusIcon, PlusIcon } from "@/components/icons";
@@ -41,7 +41,10 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const seats = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.seats, 0);
-  const total = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.price, 0);
+  const subtotal = event.tiers.reduce((s, t) => s + (qty[t.id] ?? 0) * t.price, 0);
+  // frais de paiement Mobile Money à la charge du client (calcul identique au serveur)
+  const fee = paymentFee(subtotal, event.paymentFee);
+  const total = subtotal + fee;
   const pack = event.pack;
   const seatPacks = useMemo(() => Array.from({ length: pack ? seats : 0 }, (_, i) => packs[i] ?? { style: "", size: "" }), [pack, seats, packs]);
   const setPack = (i: number, patch: Partial<PackChoice>) =>
@@ -388,6 +391,12 @@ export function BookingForm({ event }: { event: EventEdition }) {
                 </li>
               ))}
             {seats === 0 && <li className="text-cacao-muted">Aucun pass sélectionné.</li>}
+            {fee > 0 && (
+              <li className="flex justify-between gap-4">
+                <span>Frais de paiement {methodName ?? "Mobile Money"}</span>
+                <span className="font-semibold tabular-nums">{formatPrice(fee)}</span>
+              </li>
+            )}
             {perSeat &&
               Array.from({ length: seats }, (_, i) => {
                 const p = seatPacks[i];

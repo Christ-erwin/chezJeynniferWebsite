@@ -133,7 +133,10 @@ export type AdminOrder = {
   items: { tierId: string; label: string; quantity: number; unitPrice: number; seats: number }[];
   packs?: PackChoice[];
   participants?: AdminParticipant[];
+  /** montant payé = billets + frais de paiement */
   total: number;
+  /** frais de paiement payés par le client (reviennent à GeniusPay) */
+  fee?: number;
   createdAt: string;
   updatedAt: string;
   paidAt?: string;

@@ -38,7 +38,10 @@ export type Order = {
   packs?: PackChoice[];
   /** une entrée par place, dans l'ordre des billets */
   participants?: Participant[];
+  /** montant payé par le client = billets + frais de paiement */
   total: number;
+  /** frais de paiement répercutés sur le client (inclus dans total) ; absent = aucun */
+  fee?: number;
   currency: 'XOF';
   createdAt: string;
   updatedAt: string;

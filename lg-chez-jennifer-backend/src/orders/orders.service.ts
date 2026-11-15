@@ -7,6 +7,7 @@ import { PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment.prov
 import { OrdersStore } from './orders.store.js';
 import type { Order, OrderItem, OrderStatus, PackChoice, Participant, PaymentMethod, PublicOrder, Ticket } from './order.types.js';
 import { assignTeams } from './teams.js';
+import { feeRule, paymentFee } from './fees.js';
 
 /** Une commande non payée bloque ses places pendant ce délai. */
 const HOLD_MS = 20 * 60 * 1000;
@@ -42,6 +43,8 @@ export function normalizeCiPhone(raw: string): string | null {
 }
 
 const seatsOf = (o: Order) => o.items.reduce((n, i) => n + i.quantity * i.seats, 0);
+/** recette billetterie (hors frais de paiement, qui reviennent à GeniusPay) */
+const revenueOf = (o: Order) => o.total - (o.fee ?? 0);
 const holds = (o: Order) => o.status === 'paid' || o.status === 'pending';
 
 export type CheckinResult =
@@ -52,6 +55,8 @@ export type CheckinResult =
 export class OrdersService {
   private readonly log = new Logger('Orders');
   private lastCheck = new Map<string, number>();
+  /** frais de paiement répercutés sur les commandes en ligne (voir fees.ts) */
+  private readonly fees = feeRule();
 
   constructor(
     private readonly store: OrdersStore,
@@ -101,6 +106,7 @@ export class OrdersService {
       venue: { name: venue.name, city: venue.city, revealedAfterBooking: venue.revealedAfterBooking },
       remaining: Math.max(e.capacity - this.seatsTaken(e.id), 0),
       ...(e.genders ? { remainingByGender: this.remainingByGender(e) } : {}),
+      ...(this.fees ? { paymentFee: this.fees } : {}),
     };
   }
 
@@ -128,8 +134,13 @@ export class OrdersService {
     if (input.imageConsent !== true)
       throw new BadRequestException('Accepte le droit à l’image pour continuer : la soirée est filmée et photographiée.');
 
+    const fee = paymentFee(
+      items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
+      this.fees,
+    );
     const order = await this.reserve(event, items, buyer, method, this.provider.name, packs, participants, {
       imageConsentAt: new Date().toISOString(),
+      ...(fee ? { fee } : {}),
     });
 
     try {
@@ -352,7 +363,7 @@ export class OrdersService {
     this.expireStaleInMemory();
     const orders = this.store.all();
     const paid = orders.filter((o) => o.status === 'paid');
-    const byMethod = (m: PaymentMethod) => paid.filter((o) => o.paymentMethod === m).reduce((s, o) => s + o.total, 0);
+    const byMethod = (m: PaymentMethod) => paid.filter((o) => o.paymentMethod === m).reduce((s, o) => s + revenueOf(o), 0);
     const since = (days: number) => Date.now() - days * 86400000;
     const perEvent = this.events.all().map((e) => {
       const eo = orders.filter((o) => o.eventId === e.id);
@@ -365,7 +376,7 @@ export class OrdersService {
         capacity: e.capacity,
         seatsSold: ep.reduce((s, o) => s + seatsOf(o), 0),
         seatsPending: eo.filter((o) => o.status === 'pending').reduce((s, o) => s + seatsOf(o), 0),
-        revenue: ep.reduce((s, o) => s + o.total, 0),
+        revenue: ep.reduce((s, o) => s + revenueOf(o), 0),
         orders: ep.length,
         checkedIn: ep.reduce((n, o) => n + o.tickets.filter((t) => t.usedAt).length, 0),
         tickets: ep.reduce((n, o) => n + o.tickets.length, 0),
@@ -375,11 +386,11 @@ export class OrdersService {
     const days = Array.from({ length: 14 }, (_, i) => {
       const d = new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10);
       const dayPaid = paid.filter((o) => (o.paidAt ?? o.createdAt).slice(0, 10) === d);
-      return { date: d, revenue: dayPaid.reduce((s, o) => s + o.total, 0), tickets: dayPaid.reduce((n, o) => n + o.tickets.length, 0) };
+      return { date: d, revenue: dayPaid.reduce((s, o) => s + revenueOf(o), 0), tickets: dayPaid.reduce((n, o) => n + o.tickets.length, 0) };
     });
     return {
-      revenue: paid.reduce((s, o) => s + o.total, 0),
-      revenue7d: paid.filter((o) => Date.parse(o.paidAt ?? o.createdAt) >= since(7)).reduce((s, o) => s + o.total, 0),
+      revenue: paid.reduce((s, o) => s + revenueOf(o), 0),
+      revenue7d: paid.filter((o) => Date.parse(o.paidAt ?? o.createdAt) >= since(7)).reduce((s, o) => s + revenueOf(o), 0),
       ticketsSold: paid.reduce((n, o) => n + o.tickets.length, 0),
       ordersPaid: paid.length,
       ordersPending: orders.filter((o) => o.status === 'pending').length,
@@ -395,7 +406,7 @@ export class OrdersService {
       const s = String(v ?? '');
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Total (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs', 'Participants', 'Droit à l’image accepté le'];
+    const head = ['Référence', 'Statut', 'Édition', 'Date commande', 'Nom', 'Téléphone', 'E-mail', 'Passes', 'Places', 'Billets (FCFA)', 'Frais de paiement (FCFA)', 'Payé par le client (FCFA)', 'Paiement', 'Payé le', 'Billets', 'Scannés', 'Packs', 'Participants', 'Droit à l’image accepté le'];
     const rows = orders.map((o) => [
       o.reference,
       o.status,
@@ -406,6 +417,8 @@ export class OrdersService {
       o.buyer.email ?? '',
       o.items.map((i) => `${i.quantity}x ${i.label}`).join(' + '),
       seatsOf(o),
+      revenueOf(o),
+      o.fee ?? 0,
       o.total,
       o.paymentMethod,
       o.paidAt ?? '',
@@ -499,7 +512,7 @@ export class OrdersService {
     provider: Order['provider'],
     packs?: PackChoice[],
     participants?: Participant[],
-    extra?: Pick<Order, 'imageConsentAt'>,
+    extra?: Pick<Order, 'imageConsentAt' | 'fee'>,
   ): Promise<Order> {
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     return this.store.mutate(() => {
@@ -537,7 +550,7 @@ export class OrdersService {
         ...(packs ? { packs } : {}),
         ...(participants ? { participants } : {}),
         ...extra,
-        total: items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
+        total: items.reduce((s, i) => s + i.quantity * i.unitPrice, 0) + (extra?.fee ?? 0),
         currency: 'XOF',
         createdAt: now,
         updatedAt: now,
@@ -644,6 +657,7 @@ export class OrdersService {
       buyer: o.buyer,
       items: o.items.map(({ seats: _seats, ...rest }) => rest),
       total: o.total,
+      ...(o.fee ? { fee: o.fee } : {}),
       currency: o.currency,
       createdAt: o.createdAt,
       tickets: o.status === 'paid' ? o.tickets.map(({ usedAt: _u, ...t }) => t) : [],

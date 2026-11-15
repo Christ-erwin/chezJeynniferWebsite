@@ -87,7 +87,9 @@ export type Order = {
   paymentMethod: PaymentMethod;
   buyer: { name: string; phone: string; email?: string };
   items: { tierId: string; label: string; quantity: number; unitPrice: number }[];
+  /** montant payé = billets + frais de paiement */
   total: number;
+  fee?: number;
   currency: "XOF";
   createdAt: string;
   venue?: { name: string; city: string; address?: string };
