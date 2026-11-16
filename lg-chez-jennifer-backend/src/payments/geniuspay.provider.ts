@@ -70,7 +70,9 @@ export class GeniusPayProvider implements PaymentProvider {
       customer: {
         name: order.buyer.name,
         phone: order.buyer.phone,
-        ...(order.buyer.email ? { email: order.buyer.email } : {}),
+        // e-mail volontairement NON transmis : GeniusPay enverrait son propre reçu
+        // en plus de notre e-mail de billets. Réactiver avec GENIUSPAY_SEND_EMAIL=true.
+        ...(order.buyer.email && process.env.GENIUSPAY_SEND_EMAIL === 'true' ? { email: order.buyer.email } : {}),
         country: 'CI',
       },
       success_url: back,
