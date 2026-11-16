@@ -6,7 +6,6 @@ import { conceptNames, dateParts } from "@/lib/catalog";
 import { fetchEvent } from "@/lib/events";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { SalesSoon } from "@/components/booking/SalesSoon";
-import { SeatsLeft } from "@/components/booking/SeatsLeft";
 import { ArrowLeftIcon, CalendarIcon, ClockIcon, PinIcon } from "@/components/icons";
 
 export const revalidate = 30;
@@ -55,7 +54,6 @@ export default async function ReserverPage({ params }: PageProps<"/reserver/[id]
               <li className="flex items-center gap-2"><PinIcon className="h-4 w-4 text-peach" /> {event.venue.name}{event.venue.revealedAfterBooking ? " · adresse après paiement" : ""}</li>
             </ul>
             {event.note && <p className="mt-3 max-w-2xl text-sm text-paper-dim">{event.note}</p>}
-            <SeatsLeft event={event} />
           </div>
         </header>
 

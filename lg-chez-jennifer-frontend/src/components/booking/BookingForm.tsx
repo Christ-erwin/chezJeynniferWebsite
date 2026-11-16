@@ -222,7 +222,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
               n={2}
               title={seats > 1 ? "Les participants" : askPeople ? "Ta place" : "Ton pack"}
               hint={[
-                genders ? `${genders.fille} places filles · ${genders.garcon} places garçons.` : "",
+                genders ? "Places réparties entre filles et garçons." : "",
                 pack ? `${pack.label} offert avec chaque place.` : "",
               ]
                 .filter(Boolean)
@@ -305,11 +305,6 @@ export function BookingForm({ event }: { event: EventEdition }) {
                 );
               })}
             </ul>
-            {genders && (
-              <p className="mt-4 text-xs text-paper-dim">
-                Encore {left("fille")} place{left("fille") > 1 ? "s" : ""} fille{left("fille") > 1 ? "s" : ""} · {left("garcon")} place{left("garcon") > 1 ? "s" : ""} garçon{left("garcon") > 1 ? "s" : ""}.
-              </p>
-            )}
             {show("people") && <FieldError>{errors.people}</FieldError>}
             {show("names") && <FieldError>{errors.names}</FieldError>}
             {show("packs") && <FieldError>{errors.packs}</FieldError>}

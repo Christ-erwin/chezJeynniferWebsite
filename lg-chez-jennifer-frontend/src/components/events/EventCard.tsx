@@ -39,7 +39,7 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
         )}
         {!soon && (soldOut || few) && (
           <span className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-bold ${soldOut ? "bg-night/85 text-paper" : "bg-ember text-cacao"}`}>
-            {soldOut ? "Complet" : `Plus que ${event.remaining} place${event.remaining > 1 ? "s" : ""}`}
+            {soldOut ? "Complet" : "Dernières places"}
           </span>
         )}
       </div>
