@@ -456,11 +456,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
               <Link href="/conditions" target="_blank" className="font-semibold underline underline-offset-2">
                 conditions de vente
               </Link>{" "}
-              (dont le{" "}
-              <Link href="/remboursement" target="_blank" className="underline underline-offset-2">
-                délai d&apos;annulation de 10 jours ouvrables
-              </Link>
-              ) et le traitement de mes données selon la{" "}
+              et le traitement de mes données selon la{" "}
               <Link href="/confidentialite" target="_blank" className="font-semibold underline underline-offset-2">
                 politique de confidentialité
               </Link>
