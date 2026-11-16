@@ -77,7 +77,7 @@ export default function Confidentialite() {
           <tr>
             <td>Photos et vidéos prises pendant les soirées</td>
             <td>Souvenirs et communication des Soirées chez Jeynnifer (réseaux sociaux, site, vidéos)</td>
-            <td>Tant qu&apos;elles sont publiées ; retirées sur simple demande</td>
+            <td>Tant qu&apos;elles sont publiées ; retirées ou floutées sur demande (voir section 5)</td>
           </tr>
           <tr>
             <td>Soirée Loup-Garou : prénom et photo des joueurs, saisis par notre équipe</td>
@@ -147,7 +147,11 @@ export default function Confidentialite() {
         <li>les faire corriger, compléter ou mettre à jour (droit de rectification) ;</li>
         <li>les faire effacer, sauf ce que la loi nous oblige à garder (droit à l&apos;effacement) ;</li>
         <li>t&apos;opposer à leur utilisation pour un motif légitime (droit d&apos;opposition) ;</li>
-        <li>retirer ton accord sur le droit à l&apos;image : nous retirons ou floutons alors les photos et vidéos que nous avons publiées où tu apparais.</li>
+        <li>
+          retirer ton accord sur le droit à l&apos;image, pour l&apos;avenir : nous retirons de nos propres comptes les photos où tu apparais
+          seul·e ou au premier plan, et floutons ton visage (ou coupons le passage) sur les photos de groupe et vidéos montées. Les
+          publications antérieures au retrait restent valables, et nous ne pouvons pas agir sur les copies faites par d&apos;autres.
+        </li>
       </ul>
       <p>
         Pour cela, écris-nous sur{" "}

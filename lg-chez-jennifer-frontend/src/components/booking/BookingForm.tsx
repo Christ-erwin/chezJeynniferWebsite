@@ -481,8 +481,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
             <span>
               <strong className="font-semibold">Droit à l&apos;image.</strong> La soirée est filmée et photographiée. J&apos;accepte, pour moi
               {seats > 1 ? " et les personnes de ma réservation (que j'ai prévenues)" : ""}, d&apos;apparaître sur ces images et qu&apos;elles
-              soient publiées par Les Soirées chez Jeynnifer (réseaux sociaux, site, vidéos). Je peux demander le retrait d&apos;une image à tout
-              moment.
+              soient publiées par Les Soirées chez Jeynnifer (réseaux sociaux, site, vidéos).
             </span>
           </label>
           {show("consent") && (

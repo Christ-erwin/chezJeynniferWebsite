@@ -99,8 +99,13 @@ export default function Conditions() {
       <p>
         Les soirées sont <strong>filmées et photographiées</strong> pour les souvenirs et la communication des Soirées chez Jeynnifer (réseaux
         sociaux, site, vidéos). Avant le paiement, tu acceptes, pour toi et pour les personnes de ta réservation (que tu dois en avoir
-        informées), d&apos;apparaître sur ces images. Tu peux à tout moment nous demander de retirer ou de flouter une photo ou une vidéo
-        publiée où tu apparais : nous le faisons dans les meilleurs délais pour nos propres publications (voir la{" "}
+        informées), d&apos;apparaître sur ces images, sans contrepartie financière.
+      </p>
+      <p>
+        Comme le prévoit la loi n°2013-450 (article 33), tu peux ensuite retirer cet accord. Ce retrait vaut pour l&apos;avenir : les
+        publications faites avant restent valables. Sur demande, nous retirons de <strong>nos propres comptes et supports</strong> les photos
+        où tu apparais seul·e ou au premier plan ; pour les photos de groupe et les vidéos montées, nous floutons ton visage ou coupons le
+        passage concerné. Nous ne sommes pas responsables des copies ou partages faits par d&apos;autres personnes (voir la{" "}
         <Link href="/confidentialite">politique de confidentialité</Link>).
       </p>
 
