@@ -7,6 +7,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   // photos des joueurs envoyées en JSON (≈ 100–300 Ko après redimensionnement)
   app.useBodyParser('json', { limit: '2mb' });
+  // écrit les statistiques de visite en attente avant l'arrêt (redéploiement)
+  app.enableShutdownHooks();
   // Derrière le proxy de l'hébergeur : req.ip = vraie IP du client (limite
   // des essais de connexion admin). TRUST_PROXY = nombre de proxys devant l'API.
   app.set('trust proxy', Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : 0)));

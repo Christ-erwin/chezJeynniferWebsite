@@ -160,6 +160,18 @@ export type DeletionImpact = {
   total: number;
 };
 
+export type AnalyticsReport = {
+  days: number;
+  /** date de la première visite enregistrée */
+  since: string | null;
+  totals: { views: number; visitors: number; entries: number };
+  series: { date: string; views: number; visitors: number }[];
+  pages: { name: string; count: number }[];
+  sources: { name: string; count: number }[];
+  devices: Partial<Record<"mobile" | "tablet" | "desktop", number>>;
+  funnel: { id: string; title: string; startISO: string; conceptViews: number; bookingViews: number; checkouts: number; paid: number }[];
+};
+
 export type Stats = {
   revenue: number;
   revenue7d: number;
@@ -218,6 +230,7 @@ export const adminApi = {
   me: () => json<{ role: Role; expiresAt: string }>("/auth/me"),
 
   stats: () => json<Stats>("/stats"),
+  analytics: (days: number) => json<AnalyticsReport>(`/analytics?days=${days}`),
 
   events: () => json<AdminEvent[]>("/events"),
   event: (id: string) => json<AdminEvent>(`/events/${encodeURIComponent(id)}`),

@@ -7,6 +7,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { GamesModule } from './games/games.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { GamesModule } from './games/games.module.js';
     OrdersModule,
     AdminModule,
     GamesModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

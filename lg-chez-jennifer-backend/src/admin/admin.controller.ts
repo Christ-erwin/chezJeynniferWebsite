@@ -3,6 +3,7 @@ import { AdminGuard, Roles } from '../auth/auth.guard.js';
 import { EventsService } from '../events/events.service.js';
 import type { EventRecord } from '../events/event.types.js';
 import { OrdersService, type CreateOrderInput } from '../orders/orders.service.js';
+import { AnalyticsService } from '../analytics/analytics.service.js';
 
 /** Espace admin — toutes les routes exigent une session (admin par défaut). */
 @Controller('admin')
@@ -11,12 +12,69 @@ export class AdminController {
   constructor(
     private readonly events: EventsService,
     private readonly orders: OrdersService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   /* --------------------------- tableau de bord --------------------------- */
   @Get('stats')
   stats() {
     return this.orders.stats();
+  }
+
+  /**
+   * Statistiques de visite sur N jours (7 à 365) : visites, pages, sources,
+   * appareils, et tunnel par édition (page concept → réservation → paiement → payé).
+   */
+  @Get('analytics')
+  analyticsReport(@Query('days') rawDays?: string) {
+    const n = Math.min(Math.max(Number(rawDays) || 30, 7), 365);
+    const days = this.analytics.range(n);
+    const from = days[0].date;
+    const sum = (pick: (d: (typeof days)[number]) => Record<string, number>) => {
+      const acc: Record<string, number> = {};
+      for (const d of days) for (const [k, v] of Object.entries(pick(d))) acc[k] = (acc[k] ?? 0) + v;
+      return acc;
+    };
+    const pages = sum((d) => d.pages);
+    const top = (m: Record<string, number>, k: number) =>
+      Object.entries(m)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, k)
+        .map(([name, count]) => ({ name, count }));
+
+    // tunnel par édition (commandes en ligne créées sur la période)
+    const online = this.orders.list({}).filter((o) => o.provider !== 'manual' && o.createdAt.slice(0, 10) >= from);
+    const funnel = this.events
+      .all()
+      .filter((e) => e.status === 'published' && Date.parse(e.startISO) >= Date.now() - 2 * 86400000)
+      .sort((a, b) => a.startISO.localeCompare(b.startISO))
+      .map((e) => {
+        const eo = online.filter((o) => o.eventId === e.id);
+        return {
+          id: e.id,
+          title: e.title,
+          startISO: e.startISO,
+          conceptViews: e.concepts.reduce((s, c) => s + (pages[`/${c}`] ?? 0), 0),
+          bookingViews: pages[`/reserver/${e.id}`] ?? 0,
+          checkouts: eo.length,
+          paid: eo.filter((o) => o.status === 'paid').length,
+        };
+      });
+
+    return {
+      days: n,
+      since: this.analytics.since() ?? null,
+      totals: {
+        views: days.reduce((s, d) => s + d.views, 0),
+        visitors: days.reduce((s, d) => s + d.visitors, 0),
+        entries: days.reduce((s, d) => s + d.entries, 0),
+      },
+      series: days.map((d) => ({ date: d.date, views: d.views, visitors: d.visitors })),
+      pages: top(pages, 12),
+      sources: top(sum((d) => d.sources), 10),
+      devices: sum((d) => d.devices),
+      funnel,
+    };
   }
 
   /* ------------------------------ éditions ------------------------------- */

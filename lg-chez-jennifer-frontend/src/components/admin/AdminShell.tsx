@@ -5,12 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { clearSession, getSession, type AdminSession, type Role } from "@/lib/admin-api";
 import { Logo } from "@/components/ui";
-import { CalendarIcon, DashboardIcon, ExternalIcon, LogoutIcon, MoonIcon, ReceiptIcon, ScanIcon } from "./ui";
+import { CalendarIcon, DashboardIcon, ExternalIcon, LogoutIcon, MoonIcon, ChartIcon, ReceiptIcon, ScanIcon } from "./ui";
 
 const NAV: { href: string; label: string; icon: typeof DashboardIcon; roles: Role[] }[] = [
   { href: "/admin", label: "Tableau de bord", icon: DashboardIcon, roles: ["admin"] },
   { href: "/admin/evenements", label: "Éditions", icon: CalendarIcon, roles: ["admin"] },
   { href: "/admin/commandes", label: "Commandes", icon: ReceiptIcon, roles: ["admin"] },
+  { href: "/admin/statistiques", label: "Statistiques", icon: ChartIcon, roles: ["admin"] },
   { href: "/admin/controle", label: "Contrôle", icon: ScanIcon, roles: ["admin", "staff"] },
   { href: "/admin/loup-garou", label: "Loup-Garou", icon: MoonIcon, roles: ["admin", "staff"] },
 ];
@@ -35,6 +36,9 @@ const snapshot = () => {
 export function notifySession() {
   window.dispatchEvent(new Event("jey:session"));
 }
+
+/** libellés courts de la barre d'onglets mobile (6 onglets sur un écran de téléphone) */
+const SHORT: Record<string, string> = { "Tableau de bord": "Accueil", Commandes: "Ventes", Statistiques: "Stats", "Loup-Garou": "Loup-G." };
 
 function isActive(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -126,8 +130,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             {allowed.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
               return (
-                <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex flex-col items-center gap-1 py-2.5 text-[0.7rem] font-semibold ${active ? "text-peach" : "text-paper-muted"}`}>
-                  <Icon /> {label === "Tableau de bord" ? "Accueil" : label}
+                <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-w-0 flex-col items-center gap-1 px-0.5 py-2.5 text-[0.65rem] font-semibold ${active ? "text-peach" : "text-paper-muted"}`}>
+                  <Icon /> <span className="max-w-full truncate">{SHORT[label] ?? label}</span>
                 </Link>
               );
             })}
