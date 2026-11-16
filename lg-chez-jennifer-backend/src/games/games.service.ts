@@ -34,6 +34,14 @@ export class GamesService {
       }));
   }
 
+  /** photos envoyées encore utilisées par une partie (pour le nettoyage des photos orphelines) */
+  photoPaths(): string[] {
+    return this.store
+      .all()
+      .flatMap((g) => g.players.map((p) => p.photo))
+      .filter((p): p is string => !!p && p.startsWith('media/'));
+  }
+
   get(id: string): Game {
     const g = this.store.get(id);
     if (!g) throw new NotFoundException('Partie introuvable.');

@@ -3,6 +3,7 @@ import { CONCEPTS } from "@/lib/catalog";
 import { SITE, whatsappLink } from "@/lib/site";
 import { Logo, PassButton, StringLights } from "@/components/ui";
 import { InstagramIcon, WhatsappIcon } from "@/components/icons";
+import { LEGAL_PAGES } from "@/components/legal/LegalPage";
 
 export function Footer() {
   return (
@@ -71,7 +72,19 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 text-xs text-paper-dim sm:flex-row">
+        <nav aria-label="Informations légales" className="mt-12 border-t border-line pt-6">
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm sm:justify-start">
+            {LEGAL_PAGES.map((p) => (
+              <li key={p.href}>
+                <Link href={p.href} className="inline-block py-2 text-paper-muted underline-offset-4 hover:text-peach hover:underline">
+                  {p.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 text-xs text-paper-dim sm:flex-row">
           <p>© {new Date().getFullYear()} {SITE.name}. Abidjan, Côte d&apos;Ivoire.</p>
           <p>Paiement sécurisé · Wave · Orange Money</p>
         </div>

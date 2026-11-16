@@ -63,6 +63,8 @@ export type CreateOrderInput = {
   participants?: { name?: string; gender?: Gender }[];
   /** droit à l'image accepté (case obligatoire avant paiement) */
   imageConsent: true;
+  /** conditions de vente + politique de confidentialité acceptées */
+  termsAccepted: true;
 };
 
 export type OrderStatus = "pending" | "paid" | "failed" | "cancelled" | "expired";

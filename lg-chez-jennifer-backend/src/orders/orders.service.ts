@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, type OnApplicationShutdown, type OnModuleInit } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { EventsService } from '../events/events.service.js';
 import { GENDERS, styleGender, type EventRecord, type Gender, type GenderQuota, type PublicEvent } from '../events/event.types.js';
@@ -16,6 +16,8 @@ const MAX_SEATS_PER_ORDER = 10;
 /** Intervalle minimal entre deux vérifications de statut auprès de l'agrégateur. */
 const CHECK_EVERY_MS = 5000;
 
+const DAY_MS = 86_400_000;
+
 export type CreateOrderInput = {
   eventId?: unknown;
   items?: unknown;
@@ -25,6 +27,8 @@ export type CreateOrderInput = {
   participants?: unknown;
   /** case « droit à l'image » cochée (obligatoire en ligne : la soirée est filmée) */
   imageConsent?: unknown;
+  /** case « conditions de vente + politique de confidentialité » cochée (obligatoire en ligne) */
+  termsAccepted?: unknown;
 };
 
 const GENDER_LABEL: Record<Gender, string> = { fille: 'fille', garcon: 'garçon' };
@@ -52,9 +56,10 @@ export type CheckinResult =
   | { ok: false; reason: 'unknown' | 'not-paid' | 'already-used' | 'wrong-event'; message: string; ticket?: Ticket; order?: Pick<Order, 'reference' | 'eventId' | 'eventTitle' | 'buyer' | 'status'> };
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit, OnApplicationShutdown {
   private readonly log = new Logger('Orders');
   private lastCheck = new Map<string, number>();
+  private purgeTimer?: NodeJS.Timeout;
   /** frais de paiement répercutés sur les commandes en ligne (voir fees.ts) */
   private readonly fees = feeRule();
 
@@ -138,6 +143,8 @@ export class OrdersService {
     });
     const method = input.paymentMethod;
     if (method !== 'wave' && method !== 'orange_money') throw new BadRequestException('Choisis Wave ou Orange Money.');
+    if (input.termsAccepted !== true)
+      throw new BadRequestException('Accepte les conditions de vente et la politique de confidentialité pour continuer.');
     if (input.imageConsent !== true)
       throw new BadRequestException('Accepte le droit à l’image pour continuer : la soirée est filmée et photographiée.');
 
@@ -147,6 +154,7 @@ export class OrdersService {
     );
     const order = await this.reserve(event, items, buyer, method, this.provider.name, packs, participants, {
       imageConsentAt: new Date().toISOString(),
+      termsAcceptedAt: new Date().toISOString(),
       ...(fee ? { fee } : {}),
     });
 
@@ -438,6 +446,56 @@ export class OrdersService {
     });
   }
 
+  /* ====================== durées de conservation ====================== */
+  onModuleInit() {
+    void this.purgePersonalData();
+    this.purgeTimer = setInterval(() => void this.purgePersonalData(), DAY_MS);
+    this.purgeTimer.unref();
+  }
+
+  onApplicationShutdown() {
+    if (this.purgeTimer) clearInterval(this.purgeTimer);
+  }
+
+  /**
+   * Applique les durées annoncées dans la politique de confidentialité :
+   *  - commande jamais payée (abandonnée, échouée, annulée avant paiement) : supprimée après 30 jours ;
+   *  - 12 mois après la soirée : téléphone, e-mail, invités, packs et noms sur les billets effacés.
+   *    Restent la référence, le nom de l'acheteur, les montants et les dates (comptabilité OHADA : 10 ans).
+   *  Une commande avec un remboursement encore à faire n'est pas touchée.
+   */
+  purgePersonalData(now = Date.now()): Promise<{ deleted: number; anonymized: number }> {
+    return this.store.mutate(() => {
+      let deleted = 0;
+      let anonymized = 0;
+      for (const o of this.store.all()) {
+        if (o.refund && !o.refund.doneAt) continue;
+        const neverPaid = o.status === 'expired' || o.status === 'failed' || (o.status === 'cancelled' && !o.paidAt && !o.refund);
+        if (neverPaid && Date.parse(o.createdAt) < now - 30 * DAY_MS) {
+          this.store.delete(o.id);
+          deleted++;
+          continue;
+        }
+        if (!o.anonymizedAt && o.status !== 'pending' && Date.parse(o.eventDate) < now - 365 * DAY_MS) {
+          const at = new Date(now).toISOString();
+          this.store.set({
+            ...o,
+            buyer: { name: o.buyer.name, phone: '' },
+            participants: undefined,
+            packs: undefined,
+            tickets: o.tickets.map(({ code, label, usedAt }): Ticket => ({ code, label, holder: "—", ...(usedAt ? { usedAt } : {}) })),
+            history: (o.history ?? []).map((h) => ({ ...h, action: h.action.replace(/[^\s@]+@[^\s@]+/g, '[e-mail effacé]') })),
+            anonymizedAt: at,
+            updatedAt: at,
+          });
+          anonymized++;
+        }
+      }
+      if (deleted || anonymized) this.log.log(`conservation : ${deleted} commande(s) abandonnée(s) supprimée(s), ${anonymized} anonymisée(s)`);
+      return { deleted, anonymized };
+    });
+  }
+
   /** Contrôle à l'entrée : valide un billet une seule fois. */
   checkin(rawCode: unknown, eventId?: string): Promise<CheckinResult> {
     const codeStr = typeof rawCode === 'string' ? rawCode.trim().toUpperCase() : '';
@@ -579,7 +637,8 @@ export class OrdersService {
    * le sexe (obligatoire si quotas) et le nom de chaque personne. En ligne
    * (`online`), le nom est obligatoire dès la 2ᵉ place ; la 1ʳᵉ est l'acheteur.
    */
-  private parseParticipants(event: EventRecord, items: OrderItem[], raw: unknown, online: boolean): Participant[] | undefined {
+  /** Nom des invités facultatif (minimisation des données) ; sexe obligatoire seulement s'il y a des quotas. */
+  private parseParticipants(event: EventRecord, items: OrderItem[], raw: unknown, _online: boolean): Participant[] | undefined {
     if (!event.genders && !event.teams?.length) return undefined;
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     if (!Array.isArray(raw) || raw.length === 0) {
@@ -591,7 +650,6 @@ export class OrdersService {
       const gender = p?.gender;
       if (event.genders && !GENDERS.includes(gender as Gender)) throw new BadRequestException(`Place ${i + 1} : fille ou garçon ?`);
       const name = typeof p?.name === 'string' ? p.name.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
-      if (online && i > 0 && name.length < 2) throw new BadRequestException(`Place ${i + 1} : indique le nom de la personne.`);
       return { ...(name ? { name } : {}), ...(event.genders ? { gender: gender as Gender } : {}) };
     });
   }
@@ -616,7 +674,7 @@ export class OrdersService {
     provider: Order['provider'],
     packs?: PackChoice[],
     participants?: Participant[],
-    extra?: Pick<Order, 'imageConsentAt' | 'fee'>,
+    extra?: Pick<Order, 'imageConsentAt' | 'termsAcceptedAt' | 'fee'>,
   ): Promise<Order> {
     const seats = items.reduce((s, i) => s + i.quantity * i.seats, 0);
     return this.store.mutate(() => {

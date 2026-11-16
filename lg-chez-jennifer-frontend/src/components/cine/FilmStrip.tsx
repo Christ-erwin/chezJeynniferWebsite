@@ -49,7 +49,7 @@ export function FilmStrip() {
   );
 
   return (
-    <div ref={root} className="overflow-hidden py-6 motion-reduce:overflow-x-auto">
+    <div ref={root} tabIndex={0} role="region" aria-label="Films à l'affiche, faire défiler horizontalement" className="overflow-hidden py-6 focus-visible:outline-2 focus-visible:outline-peach motion-reduce:overflow-x-auto">
       <div className="fs-track w-max -rotate-[1.5deg] bg-[#1a1622] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
         <Sprockets />
         <ol className="flex gap-4 px-4">

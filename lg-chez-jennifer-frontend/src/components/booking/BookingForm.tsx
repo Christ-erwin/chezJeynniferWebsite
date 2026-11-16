@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { type EventEdition, type Gender, type PackChoice, GENDER_LABEL, formatPrice, paymentFee, stylesFor } from "@/lib/catalog";
 import { createOrder, type PaymentMethod } from "@/lib/api";
 import { PAYMENT_METHODS, PaymentLogo } from "@/components/PaymentBadges";
@@ -32,6 +33,8 @@ export function BookingForm({ event }: { event: EventEdition }) {
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   // droit à l'image : la soirée est filmée, accord obligatoire avant de payer
   const [consent, setConsent] = useState(false);
+  // conditions de vente + politique de confidentialité (loi 2013-450 art. 14 : consentement exprès)
+  const [terms, setTerms] = useState(false);
   // pack offert : un choix (modèle + taille) par place, gardé même si on retire puis remet une place
   const [packs, setPacks] = useState<PackChoice[]>([]);
   // participants : sexe (quotas filles / garçons) et nom, un par place
@@ -122,10 +125,10 @@ export function BookingForm({ event }: { event: EventEdition }) {
           e.people = l === 0 ? `Plus de place pour les ${g === "fille" ? "filles" : "garçons"}.` : `Il ne reste que ${l} place${l > 1 ? "s" : ""} pour les ${g === "fille" ? "filles" : "garçons"}.`;
       }
     }
-    if (askPeople && seatPeople.some((p, i) => i > 0 && p.name.trim().length < 2)) e.names = "Indique le nom de chaque personne.";
+    if (!terms) e.terms = "Coche la case pour accepter les conditions de vente et la politique de confidentialité.";
     if (!consent) e.consent = "Coche la case pour continuer : la soirée est filmée et photographiée.";
     return e;
-  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks, genders, askPeople, seatPeople, event.remainingByGender, consent]);
+  }, [seats, maxSeats, name, phone, email, method, pack, seatPacks, genders, seatPeople, event.remainingByGender, consent, terms]);
 
   const show = (k: string) => (touched[k] || touched.submit) && errors[k];
 
@@ -148,6 +151,7 @@ export function BookingForm({ event }: { event: EventEdition }) {
         buyer: { name: name.trim(), phone, ...(email ? { email: email.trim() } : {}) },
         paymentMethod: method!,
         imageConsent: true,
+        termsAccepted: true,
         ...(pack ? { packs: seatPacks } : {}),
         ...(askPeople
           ? { participants: seatPeople.map((p, i) => ({ ...(i > 0 ? { name: p.name.trim() } : {}), ...(p.gender ? { gender: p.gender } : {}) })) }
@@ -249,12 +253,10 @@ export function BookingForm({ event }: { event: EventEdition }) {
                       <input
                         value={who.name}
                         onChange={(e) => setPerson(i, { name: e.target.value })}
-                        onBlur={() => setTouched((t) => ({ ...t, names: true }))}
                         autoComplete="off"
-                        aria-label={`Nom et prénom — place ${i + 1}`}
-                        aria-invalid={!!show("names") && who.name.trim().length < 2}
-                        placeholder="Nom et prénom"
-                        className={inputCls(!!show("names") && who.name.trim().length < 2)}
+                        aria-label={`Nom et prénom de l'invité (facultatif) — place ${i + 1}`}
+                        placeholder="Nom de l'invité (facultatif)"
+                        className={inputCls(false)}
                       />
                     )}
                     {genders && (
@@ -306,7 +308,6 @@ export function BookingForm({ event }: { event: EventEdition }) {
               })}
             </ul>
             {show("people") && <FieldError>{errors.people}</FieldError>}
-            {show("names") && <FieldError>{errors.names}</FieldError>}
             {show("packs") && <FieldError>{errors.packs}</FieldError>}
           </fieldset>
         )}
@@ -315,6 +316,13 @@ export function BookingForm({ event }: { event: EventEdition }) {
         <fieldset className="rounded-[1.4rem] border border-line bg-night-2 p-6 sm:p-8">
           <legend className="sr-only">Tes informations</legend>
           <StepTitle n={n.infos} title="Tes infos" hint="Ta commande est liée à ce numéro." />
+          <p className="mt-3 text-xs leading-relaxed text-paper-muted">
+            Ces informations servent uniquement à ta commande : paiement, envoi de tes billets et infos pratiques sur la soirée. Elles ne sont
+            ni vendues ni utilisées pour de la publicité.{" "}
+            <Link href="/confidentialite" target="_blank" className="underline underline-offset-2 hover:text-peach">
+              Comment nous protégeons tes données
+            </Link>
+          </p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <Field label="Nom et prénom" error={show("name") ? errors.name : undefined} className="sm:col-span-2">
               <input
@@ -434,19 +442,51 @@ export function BookingForm({ event }: { event: EventEdition }) {
             <span className="t-display text-4xl font-semibold tabular-nums">{formatPrice(total)}</span>
           </div>
 
-          <label className={`mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed transition-colors ${show("consent") ? "border-wine bg-wine/5" : "border-cacao-line"}`}>
+          <label className={`mt-6 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed transition-colors ${show("terms") ? "border-wine bg-wine/5" : "border-cacao-line"}`}>
+            <input
+              type="checkbox"
+              checked={terms}
+              onChange={(e) => setTerms(e.target.checked)}
+              aria-invalid={!!show("terms")}
+              aria-describedby={show("terms") ? "terms-error" : undefined}
+              className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-wine"
+            />
+            <span>
+              J&apos;accepte les{" "}
+              <Link href="/conditions" target="_blank" className="font-semibold underline underline-offset-2">
+                conditions de vente
+              </Link>{" "}
+              (dont le{" "}
+              <Link href="/remboursement" target="_blank" className="underline underline-offset-2">
+                délai d&apos;annulation de 10 jours ouvrables
+              </Link>
+              ) et le traitement de mes données selon la{" "}
+              <Link href="/confidentialite" target="_blank" className="font-semibold underline underline-offset-2">
+                politique de confidentialité
+              </Link>
+              .
+            </span>
+          </label>
+          {show("terms") && (
+            <p id="terms-error" className="mt-2 text-xs font-medium text-wine">
+              {errors.terms}
+            </p>
+          )}
+
+          <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed transition-colors ${show("consent") ? "border-wine bg-wine/5" : "border-cacao-line"}`}>
             <input
               type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
               aria-invalid={!!show("consent")}
-              aria-describedby="consent-error"
+              aria-describedby={show("consent") ? "consent-error" : undefined}
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-wine"
             />
             <span>
               <strong className="font-semibold">Droit à l&apos;image.</strong> La soirée est filmée et photographiée. J&apos;accepte, pour moi
-              {seats > 1 ? " et les personnes de ma réservation" : ""}, d&apos;apparaître sur ces images et qu&apos;elles soient publiées par Les
-              Soirées chez Jeynnifer (réseaux sociaux, site, vidéos).
+              {seats > 1 ? " et les personnes de ma réservation (que j'ai prévenues)" : ""}, d&apos;apparaître sur ces images et qu&apos;elles
+              soient publiées par Les Soirées chez Jeynnifer (réseaux sociaux, site, vidéos). Je peux demander le retrait d&apos;une image à tout
+              moment.
             </span>
           </label>
           {show("consent") && (

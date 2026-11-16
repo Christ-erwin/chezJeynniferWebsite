@@ -55,6 +55,10 @@ export type Order = {
   eventDeletedAt?: string;
   /** remboursement à faire au client (commande payée d'une édition supprimée) ; doneAt = remboursé */
   refund?: { amount: number; doneAt?: string };
+  /** conditions de vente et politique de confidentialité acceptées (case cochée avant paiement) */
+  termsAcceptedAt?: string;
+  /** données personnelles effacées (durée de conservation dépassée) ; seules restent les données comptables */
+  anonymizedAt?: string;
   /** droit à l'image accepté par l'acheteur (pour lui et sa réservation), case cochée avant paiement */
   imageConsentAt?: string;
   /** trace des actions faites depuis l'admin */

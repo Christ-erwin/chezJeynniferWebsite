@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getConcept, formatPrice, dateParts } from "@/lib/catalog";
+import { getConcept, formatPrice, dateParts, IMAGE_ALT } from "@/lib/catalog";
 import { fetchUpcomingEvents } from "@/lib/events";
 import { SunsetHero } from "@/components/beach/SunsetHero";
 import { DayTimeline } from "@/components/beach/DayTimeline";
@@ -61,7 +61,7 @@ const INCLUDED = [
 
 const POSTERS = [
   { src: "/images/bp-affiche-noel.jpg", alt: "Affiche : Les Soirées chez Jeynnifer, Spéciale Noël à Assinie" },
-  { src: "/images/bp-affiche-infos.jpg", alt: "Affiche : 12 → 13 décembre 2026, 60 000 FCFA par personne, 30 places" },
+  { src: "/images/bp-affiche-infos.jpg", alt: IMAGE_ALT["/images/bp-affiche-infos.jpg"] },
   { src: "/images/bp-affiche-enfance.jpg", alt: "Affiche : Retour en enfance, les jeux de notre enfance" },
   { src: "/images/bp-affiche-feu.jpg", alt: "Affiche : le fameux Loup-Garou et le cinéma en plein air" },
   { src: "/images/bp-affiche-pack.jpg", alt: "Affiche : le pack personnalisé, t-shirt et crop top" },
@@ -263,7 +263,7 @@ export default async function BeachPartyPage() {
           <p className="t-label text-sunset" data-reveal>Spéciale Noël</p>
           <h2 className="t-display mt-4 text-5xl text-paper" data-split>Les affiches de l&apos;édition.</h2>
         </div>
-        <ul className="mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 sm:px-8 lg:px-[max(2rem,calc((100vw-1400px)/2+2rem))]" data-stagger>
+        <ul tabIndex={0} aria-label="Galerie des affiches, faire défiler horizontalement" className="mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto focus-visible:outline-2 focus-visible:outline-peach px-5 pb-4 sm:px-8 lg:px-[max(2rem,calc((100vw-1400px)/2+2rem))]" data-stagger>
           {POSTERS.map((p) => (
             <li key={p.src} className="relative aspect-[9/16] w-[68vw] max-w-[300px] shrink-0 snap-start overflow-hidden rounded-[1.2rem] border border-line">
               <Image src={p.src} alt={p.alt} fill sizes="300px" className="object-cover" />

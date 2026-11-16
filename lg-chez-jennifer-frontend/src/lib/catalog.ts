@@ -228,3 +228,41 @@ export function styleGender(style: string): Gender | undefined {
 export function stylesFor(styles: string[], gender: Gender | "" | undefined): string[] {
   return gender ? styles.filter((s) => !styleGender(s) || styleGender(s) === gender) : styles;
 }
+
+/**
+ * Texte alternatif des images du site (accessibilité, lecteurs d'écran, agents IA).
+ * Décrit ce que montre réellement l'image ; les affiches reprennent leur texte.
+ * Les images de fond purement décoratives gardent alt="" là où elles sont utilisées.
+ */
+export const IMAGE_ALT: Record<string, string> = {
+  "/images/gn-table.jpg": "Table de jeux de société et de cartes (Uno, Story…) éclairée par une lanterne",
+  "/images/gn-friends.jpg": "Amies qui rient autour d'une table de jeux",
+  "/images/gn-drinks.jpg": "Cocktails colorés à la lueur des bougies",
+  "/images/gn-jenga.jpg": "Tour de bois en équilibre, partie de jeu d'adresse",
+  "/images/gn-boxes.jpg": "Boîtes de jeux de société posées sur une table, dans une lumière tamisée",
+  "/images/ev-gn.jpg": "Salon chaleureux éclairé aux bougies, boîtes de jeux de société sur les tables",
+  "/images/lg-scene.jpg": "Silhouette d'un loup hurlant devant une immense pleine lune orangée",
+  "/images/lg-moon.jpg": "Loup hurlant devant la lune, lanterne allumée",
+  "/images/lg-cards.png": "Cartes du jeu Loup-Garou à la lueur d'une lanterne",
+  "/images/lg-group.png": "Joueurs autour d'une table pendant une partie",
+  "/images/ev-halloween.jpg": "Décor d'Halloween : citrouilles sculptées et bougies allumées dans une pièce sombre",
+  "/images/cine-garden.jpg": "Cinéma en plein air dans un jardin, poufs et guirlandes lumineuses",
+  "/images/cine-wide.jpg": "Écran de cinéma en plein air dans un jardin, tables basses, coussins, lanternes et guirlandes lumineuses",
+  "/images/cine-small.jpg": "Poufs colorés installés sur la pelouse devant un écran de cinéma en plein air",
+  "/images/cine-popcorn.jpg": "Deux personnes partagent un saladier de pop-corn",
+  "/images/ev-cine.jpg": "Projection en plein air la nuit, écran lumineux et lanternes",
+  "/images/bp-sunset.jpg": "Coucher de soleil sur la plage, les vagues sur le sable",
+  "/images/bp-feu.jpg": "Feu de camp sur la plage, lanternes et poufs",
+  "/images/bp-billets.jpg": "Billets d'entrée « Spéciale Noël à Assinie » des Soirées chez Jeynnifer, avec leur QR code",
+  "/images/bp-affiche-noel.jpg": "Affiche : Les Soirées chez Jeynnifer, Spéciale Noël à Assinie",
+  "/images/bp-affiche-enfance.jpg": "Affiche : Retour en enfance, les jeux de notre enfance",
+  "/images/bp-affiche-feu.jpg": "Affiche : le fameux Loup-Garou et le cinéma en plein air",
+  "/images/bp-affiche-pack.jpg": "Affiche : le pack personnalisé, t-shirt et crop top",
+  "/images/bp-affiche-infos.jpg":
+    "Affiche Spéciale Noël à Assinie, du 12 au 13 décembre 2026, 60 000 FCFA par personne : transport aller-retour en car, balade en bateau, buffet, jeux, DJ, barbecue, Loup-Garou, cinéma en plein air, pack offert",
+};
+
+/** Texte alternatif d'une image (ou `fallback` si elle n'est pas répertoriée, ex. image ajoutée depuis l'admin). */
+export function imageAlt(src: string, fallback: string): string {
+  return IMAGE_ALT[src] ?? fallback;
+}

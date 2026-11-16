@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { type EventEdition, conceptNames, dateParts, formatPrice, salesOpenLabel } from "@/lib/catalog";
+import { type EventEdition, conceptNames, dateParts, formatPrice, imageAlt, salesOpenLabel } from "@/lib/catalog";
 import { PinIcon, ClockIcon } from "@/components/icons";
 
 /**
@@ -24,7 +24,7 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
         <Image
           src={event.cover}
           unoptimized={event.cover.startsWith("http")}
-          alt=""
+          alt={imageAlt(event.cover, `Visuel de la soirée ${event.title}`)}
           fill
           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           className="object-cover transition-transform duration-[1.4s] ease-(--ease-soft) group-hover:scale-[1.06]"
@@ -49,7 +49,7 @@ export function EventCard({ event, className = "" }: { event: EventEdition; clas
           <h3 className="t-caps text-[1.7rem] text-paper">{event.title}</h3>
           <p className="t-caps mt-1 text-[0.8rem] tracking-[0.2em] text-paper-muted">chez Jeynnifer</p>
         </div>
-        <p className="text-sm text-peach/90">{conceptNames(event.concepts)}</p>
+        <p className="text-sm text-peach">{conceptNames(event.concepts)}</p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[0.82rem] text-paper-dim">
           <li className="flex items-center gap-1.5">
             <PinIcon className="h-3.5 w-3.5" /> {event.venue.revealedAfterBooking && event.venue.name === "Lieu secret" ? "Lieu à venir" : event.venue.city}

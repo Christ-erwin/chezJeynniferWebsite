@@ -6,7 +6,7 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { CONCEPTS } from "@/lib/catalog";
+import { CONCEPTS, imageAlt } from "@/lib/catalog";
 import { GhostButton } from "@/components/ui";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -88,9 +88,9 @@ export function Worlds() {
               <div aria-hidden className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl" style={{ background: GLOW[c.slug] }} />
 
               <div className="wd-photo relative min-h-[240px] overflow-hidden rounded-[1.1rem] lg:min-h-0">
-                <Image src={c.cover} alt="" fill sizes="(min-width:1024px) 45vw, 100vw" className="object-cover" />
+                <Image src={c.cover} alt={imageAlt(c.cover, c.name)} fill sizes="(min-width:1024px) 45vw, 100vw" className="object-cover" />
                 <div className="absolute inset-0 bg-linear-to-r from-transparent via-transparent to-night-2/70" />
-                <span className="t-display absolute bottom-3 left-5 text-[7rem] font-light leading-none text-paper/15 lg:text-[10rem]">{c.number}</span>
+                <span aria-hidden className="t-display absolute bottom-3 left-5 text-[7rem] font-light leading-none text-paper/15 lg:text-[10rem]">{c.number}</span>
               </div>
 
               <div className="relative flex flex-col justify-center">
@@ -103,13 +103,13 @@ export function Worlds() {
                 </ul>
                 <h3 className="wd-in t-caps text-5xl text-paper sm:text-6xl">{c.displayName}</h3>
                 <p className="wd-in t-caps mt-2 text-lg tracking-[0.22em] text-paper-muted">chez Jeynnifer</p>
-                <p className="wd-in t-label mt-6" style={{ color: c.accent }}>{c.kicker}</p>
+                <p className="wd-in t-label mt-6" style={{ color: c.slug === "loup-garou" ? "var(--color-wolf-bright)" : c.accent }}>{c.kicker}</p>
                 <p className="wd-in mt-4 max-w-md leading-relaxed text-paper-muted">{c.description}</p>
 
                 <div className="wd-in mt-7 grid grid-cols-3 gap-3">
                   {c.gallery.map((g) => (
                     <div key={g} className="wd-thumb relative aspect-[4/3] overflow-hidden rounded-lg border border-line">
-                      <Image src={g} alt="" fill sizes="160px" className="object-cover" />
+                      <Image src={g} alt={imageAlt(g, `Photo d'ambiance ${c.name}`)} fill sizes="160px" className="object-cover" />
                     </div>
                   ))}
                 </div>

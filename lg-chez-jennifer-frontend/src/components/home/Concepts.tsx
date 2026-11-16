@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONCEPTS } from "@/lib/catalog";
+import { CONCEPTS, imageAlt } from "@/lib/catalog";
 import { Tilt } from "@/components/motion/Tilt";
 import { Heart } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
@@ -42,7 +42,7 @@ export function Concepts() {
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <Image
                     src={c.cover}
-                    alt=""
+                    alt={imageAlt(c.cover, c.name)}
                     fill
                     sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw"
                     className="object-cover transition-transform duration-[1.6s] ease-(--ease-soft) group-hover:scale-[1.07]"
