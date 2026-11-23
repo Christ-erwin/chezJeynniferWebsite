@@ -1,7 +1,11 @@
 export const CONCEPTS = ['game-night', 'loup-garou', 'cine-lune', 'beach-party'] as const;
 export type ConceptSlug = (typeof CONCEPTS)[number];
 
-export type EventStatus = 'draft' | 'published' | 'cancelled';
+/**
+ * draft : en préparation (invisible) · published : en ligne et réservable ·
+ * hidden : masquée du site (billets vendus toujours valables, vente sur place possible) · cancelled : annulée
+ */
+export type EventStatus = 'draft' | 'published' | 'hidden' | 'cancelled';
 
 export type PassTier = {
   id: string;

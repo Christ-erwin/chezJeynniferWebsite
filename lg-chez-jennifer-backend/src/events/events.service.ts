@@ -4,7 +4,7 @@ import { dataPath } from '../common/data-path.js';
 import { CONCEPTS, type ConceptSlug, type EventPack, type EventRecord, type EventStatus, type GenderQuota, type PassTier, type TeamDef } from './event.types.js';
 import { seedEvents } from './events.seed.js';
 
-const STATUSES: EventStatus[] = ['draft', 'published', 'cancelled'];
+const STATUSES: EventStatus[] = ['draft', 'published', 'hidden', 'cancelled'];
 
 function str(v: unknown, field: string, { min = 1, max = 200, optional = false } = {}): string {
   if (v === undefined || v === null || v === '') {
@@ -185,6 +185,17 @@ export class EventsService {
    * Mise à jour. `soldTierIds` : passes déjà vendus — on interdit de les
    * supprimer ou de changer leurs places (les billets émis y font référence).
    */
+  /** Changement rapide de statut (ex. masquer / remettre en ligne), sans toucher au reste de l'édition. */
+  setStatus(id: string, raw: unknown): Promise<EventRecord> {
+    const status = raw as EventStatus;
+    if (!STATUSES.includes(status)) throw new BadRequestException('Statut invalide.');
+    return this.store.mutate(() => {
+      const next: EventRecord = { ...this.require(id), status, updatedAt: new Date().toISOString() };
+      this.store.set(next);
+      return next;
+    });
+  }
+
   update(id: string, raw: Record<string, unknown>, soldTierIds: Set<string>, seatsTaken: number, takenByGender?: GenderQuota): Promise<EventRecord> {
     const data = parseEvent(raw);
     return this.store.mutate(() => {

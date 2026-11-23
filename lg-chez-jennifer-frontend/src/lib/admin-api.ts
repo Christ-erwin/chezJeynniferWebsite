@@ -82,7 +82,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /* --------------------------------- types ---------------------------------- */
-export type EventStatus = "draft" | "published" | "cancelled";
+export type EventStatus = "draft" | "published" | "hidden" | "cancelled";
 
 export type AdminEvent = {
   id: string;
@@ -240,6 +240,9 @@ export const adminApi = {
   /** commandes touchées par la suppression d'une édition */
   deletionImpact: (id: string) => json<DeletionImpact>(`/events/${encodeURIComponent(id)}/deletion-impact`),
   /** force : annule les commandes (payées → « à rembourser ») puis supprime */
+  /** masquer / remettre en ligne une édition (statut seul) */
+  setEventStatus: (id: string, status: EventStatus) =>
+    json<AdminEvent>(`/events/${encodeURIComponent(id)}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
   deleteEvent: (id: string, force = false) =>
     json<void>(`/events/${encodeURIComponent(id)}${force ? "?force=1" : ""}`, { method: "DELETE" }),
 
@@ -346,6 +349,7 @@ export const ORDER_STATUS: Record<AdminOrderStatus, { label: string; tone: Tone 
 
 export const EVENT_STATUS: Record<EventStatus, { label: string; tone: Tone }> = {
   published: { label: "En ligne", tone: "ok" },
+  hidden: { label: "Masquée", tone: "warn" },
   draft: { label: "Brouillon", tone: "mute" },
   cancelled: { label: "Annulée", tone: "bad" },
 };

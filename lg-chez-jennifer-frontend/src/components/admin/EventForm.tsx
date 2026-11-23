@@ -270,11 +270,12 @@ export function EventForm({ event }: { event?: AdminEvent }) {
 
       <aside className="space-y-6 xl:sticky xl:top-8 xl:self-start">
         <Card className="space-y-5 p-5 sm:p-6">
-          <Field label="Statut" hint="« En ligne » : visible et réservable sur le site.">
+          <Field label="Statut" hint="« En ligne » : visible et réservable. « Masquée » : retirée du site, les billets vendus restent valables.">
             {(id) => (
               <Select id={id} value={d.status} onChange={(e) => set("status", e.target.value as EventStatus)}>
                 <option value="draft">Brouillon</option>
                 <option value="published">En ligne</option>
+                <option value="hidden">Masquée (cachée du site)</option>
                 <option value="cancelled">Annulée</option>
               </Select>
             )}

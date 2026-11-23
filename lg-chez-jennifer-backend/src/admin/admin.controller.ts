@@ -119,6 +119,12 @@ export class AdminController {
    * Supprime une édition. S'il y a des commandes, il faut confirmer (?force=1) :
    * elles sont annulées et les payées marquées « à rembourser ».
    */
+  /** Masquer / remettre en ligne une édition (ou tout autre statut) en un clic. */
+  @Put('events/:id/status')
+  async setEventStatus(@Param('id') id: string, @Body() body: { status?: unknown }) {
+    return this.withStock(await this.events.setStatus(id, body?.status));
+  }
+
   @Delete('events/:id')
   @HttpCode(204)
   async deleteEvent(@Param('id') id: string, @Query('force') force?: string) {
